@@ -55,7 +55,7 @@ protected:
 	vector<PairedDPSCheck> m_PairedDPSChecks;	// vector of paired threaded database DotA player summary checks in progress
 
 public:
-	CGame( CGHost *nGHost, CMap *nMap, CSaveGame *nSaveGame, uint16_t nHostPort, unsigned char nGameState, string nGameName, string nOwnerName, string nCreatorName, string nCreatorServer );
+	CGame( CGHost *nGHost, CMap *nMap, CSaveGame *nSaveGame, uint16_t nHostPort, unsigned char nGameState, string nGameName, string nOwnerName, string nCreatorName, string nCreatorServer, uint32_t nGameId );
 	virtual ~CGame( );
 
 	virtual bool Update( void *fd, void *send_fd );
@@ -65,6 +65,10 @@ public:
 	virtual void EventGameStarted( );
 	virtual bool IsGameDataSaved( );
 	virtual void SaveGameData( );
+    
+    virtual bool IsRootAdmin( string username );
+    virtual bool IsAdmin( string username );
+    virtual bool IsPremium( string username );
 };
 
 #endif

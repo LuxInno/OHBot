@@ -22,12 +22,10 @@
 #include "util.h"
 #include "crc32.h"
 #include "sha1.h"
-#include "csvparser.h"
 #include "config.h"
 #include "language.h"
 #include "socket.h"
 #include "ghostdb.h"
-#include "ghostdbsqlite.h"
 #include "ghostdbmysql.h"
 #include "bnet.h"
 #include "map.h"
@@ -38,7 +36,6 @@
 #include "gpsprotocol.h"
 #include "game_base.h"
 #include "game.h"
-#include "game_admin.h"
 
 #include <signal.h>
 #include <stdlib.h>
@@ -49,43 +46,6 @@
 
 #define __STORMLIB_SELF__
 #include <stormlib/StormLib.h>
-
-/*
-
-#include "ghost.h"
-#include "util.h"
-#include "crc32.h"
-#include "sha1.h"
-#include "csvparser.h"
-#include "config.h"
-#include "language.h"
-#include "socket.h"
-#include "commandpacket.h"
-#include "ghostdb.h"
-#include "ghostdbsqlite.h"
-#include "ghostdbmysql.h"
-#include "bncsutilinterface.h"
-#include "warden.h"
-#include "bnlsprotocol.h"
-#include "bnlsclient.h"
-#include "bnetprotocol.h"
-#include "bnet.h"
-#include "map.h"
-#include "packed.h"
-#include "savegame.h"
-#include "replay.h"
-#include "gameslot.h"
-#include "gameplayer.h"
-#include "gameprotocol.h"
-#include "gpsprotocol.h"
-#include "game_base.h"
-#include "game.h"
-#include "game_admin.h"
-#include "stats.h"
-#include "statsdota.h"
-#include "sqlite3.h"
-
-*/
 
 #ifdef WIN32
  #include <windows.h>
@@ -391,32 +351,27 @@ int main( int argc, char **argv )
 
 CGHost :: CGHost( CConfig *CFG )
 {
-	m_UDPSocket = new CUDPSocket( );
-	m_UDPSocket->SetBroadcastTarget( CFG->GetString( "udp_broadcasttarget", string( ) ) );
-	m_UDPSocket->SetDontRoute( CFG->GetInt( "udp_dontroute", 0 ) == 0 ? false : true );
 	m_ReconnectSocket = NULL;
 	m_GPSProtocol = new CGPSProtocol( );
 	m_CRC = new CCRC32( );
 	m_CRC->Initialize( );
 	m_SHA = new CSHA1( );
 	m_CurrentGame = NULL;
-	string DBType = CFG->GetString( "db_type", "sqlite3" );
+    m_CallableGetGameId = NULL;
+    m_CallableGetBotConfig = NULL;
+    m_CallableGetBotConfigText = NULL;
+    m_CallableGetLanguages = NULL;
+    m_NewGameId = 0;
+    m_LastGameIdUpdate = GetTime( );
 	CONSOLE_Print( "[GHOST] opening primary database" );
 
-	if( DBType == "mysql" )
-	{
-#ifdef GHOST_MYSQL
-		m_DB = new CGHostDBMySQL( CFG );
-#else
-		CONSOLE_Print( "[GHOST] warning - this binary was not compiled with MySQL database support, using SQLite database instead" );
-		m_DB = new CGHostDBSQLite( CFG );
-#endif
-	}
-	else
-		m_DB = new CGHostDBSQLite( CFG );
-
-	CONSOLE_Print( "[GHOST] opening secondary (local) database" );
-	m_DBLocal = new CGHostDBSQLite( CFG );
+    m_DB = new CGHostDBMySQL( CFG );
+    
+    /* load configs */
+    m_CallableGetBotConfig = m_DB->ThreadedGetBotConfigs( );
+    m_CallableGetBotConfigText = m_DB->ThreadedGetBotConfigTexts( );
+    m_CallableAdminLists = m_DB->ThreadedAdminList( "" );
+    m_CallableGetAliases = m_DB->ThreadedGetAliases( );
 
 	// get a list of local IP addresses
 	// this list is used elsewhere to determine if a player connecting to the bot is local or not
@@ -485,207 +440,22 @@ CGHost :: CGHost( CConfig *CFG )
 	m_ExitingNice = false;
 	m_Enabled = true;
 	m_Version = "17.0";
-	m_HostCounter = 1;
-	m_AutoHostMaximumGames = CFG->GetInt( "autohost_maxgames", 0 );
-	m_AutoHostAutoStartPlayers = CFG->GetInt( "autohost_startplayers", 0 );
-	m_AutoHostGameName = CFG->GetString( "autohost_gamename", string( ) );
-	m_AutoHostOwner = CFG->GetString( "autohost_owner", string( ) );
 	m_LastAutoHostTime = GetTime( );
 	m_AutoHostMatchMaking = false;
 	m_AutoHostMinimumScore = 0.0;
 	m_AutoHostMaximumScore = 0.0;
 	m_AllGamesFinished = false;
 	m_AllGamesFinishedTime = 0;
-	m_TFT = CFG->GetInt( "bot_tft", 1 ) == 0 ? false : true;
 
 	if( m_TFT )
 		CONSOLE_Print( "[GHOST] acting as Warcraft III: The Frozen Throne" );
 	else
 		CONSOLE_Print( "[GHOST] acting as Warcraft III: Reign of Chaos" );
-
-	m_HostPort = CFG->GetInt( "bot_hostport", 6112 );
-	m_Reconnect = CFG->GetInt( "bot_reconnect", 1 ) == 0 ? false : true;
-	m_ReconnectPort = CFG->GetInt( "bot_reconnectport", 6114 );
-	m_DefaultMap = CFG->GetString( "bot_defaultmap", "map" );
-	m_AdminGameCreate = CFG->GetInt( "admingame_create", 0 ) == 0 ? false : true;
-	m_AdminGamePort = CFG->GetInt( "admingame_port", 6113 );
-	m_AdminGamePassword = CFG->GetString( "admingame_password", string( ) );
-	m_AdminGameMap = CFG->GetString( "admingame_map", string( ) );
-	m_LANWar3Version = CFG->GetInt( "lan_war3version", 24 );
-	m_ReplayWar3Version = CFG->GetInt( "replay_war3version", 24 );
-	m_ReplayBuildNumber = CFG->GetInt( "replay_buildnumber", 6059 );
-	SetConfigs( CFG );
-
-	// load the battle.net connections
-	// we're just loading the config data and creating the CBNET classes here, the connections are established later (in the Update function)
-
-	for( uint32_t i = 1; i < 10; i++ )
-	{
-		string Prefix;
-
-		if( i == 1 )
-			Prefix = "bnet_";
-		else
-			Prefix = "bnet" + UTIL_ToString( i ) + "_";
-
-		string Server = CFG->GetString( Prefix + "server", string( ) );
-		string ServerAlias = CFG->GetString( Prefix + "serveralias", string( ) );
-		string CDKeyROC = CFG->GetString( Prefix + "cdkeyroc", string( ) );
-		string CDKeyTFT = CFG->GetString( Prefix + "cdkeytft", string( ) );
-		string CountryAbbrev = CFG->GetString( Prefix + "countryabbrev", "USA" );
-		string Country = CFG->GetString( Prefix + "country", "United States" );
-		string Locale = CFG->GetString( Prefix + "locale", "system" );
-		uint32_t LocaleID;
-
-		if( Locale == "system" )
-		{
-#ifdef WIN32
-			LocaleID = GetUserDefaultLangID( );
-#else
-			LocaleID = 1033;
-#endif
-		}
-		else
-			LocaleID = UTIL_ToUInt32( Locale );
-
-		string UserName = CFG->GetString( Prefix + "username", string( ) );
-		string UserPassword = CFG->GetString( Prefix + "password", string( ) );
-		string FirstChannel = CFG->GetString( Prefix + "firstchannel", "The Void" );
-		string RootAdmin = CFG->GetString( Prefix + "rootadmin", string( ) );
-		string BNETCommandTrigger = CFG->GetString( Prefix + "commandtrigger", "!" );
-
-		if( BNETCommandTrigger.empty( ) )
-			BNETCommandTrigger = "!";
-
-		bool HoldFriends = CFG->GetInt( Prefix + "holdfriends", 1 ) == 0 ? false : true;
-		bool HoldClan = CFG->GetInt( Prefix + "holdclan", 1 ) == 0 ? false : true;
-		bool PublicCommands = CFG->GetInt( Prefix + "publiccommands", 1 ) == 0 ? false : true;
-		string BNLSServer = CFG->GetString( Prefix + "bnlsserver", string( ) );
-		int BNLSPort = CFG->GetInt( Prefix + "bnlsport", 9367 );
-		int BNLSWardenCookie = CFG->GetInt( Prefix + "bnlswardencookie", 0 );
-		unsigned char War3Version = CFG->GetInt( Prefix + "custom_war3version", 24 );
-		BYTEARRAY EXEVersion = UTIL_ExtractNumbers( CFG->GetString( Prefix + "custom_exeversion", string( ) ), 4 );
-		BYTEARRAY EXEVersionHash = UTIL_ExtractNumbers( CFG->GetString( Prefix + "custom_exeversionhash", string( ) ), 4 );
-		string PasswordHashType = CFG->GetString( Prefix + "custom_passwordhashtype", string( ) );
-		string PVPGNRealmName = CFG->GetString( Prefix + "custom_pvpgnrealmname", "PvPGN Realm" );
-		uint32_t MaxMessageLength = CFG->GetInt( Prefix + "custom_maxmessagelength", 200 );
-
-		if( Server.empty( ) )
-			break;
-
-		if( CDKeyROC.empty( ) )
-		{
-			CONSOLE_Print( "[GHOST] missing " + Prefix + "cdkeyroc, skipping this battle.net connection" );
-			continue;
-		}
-
-		if( m_TFT && CDKeyTFT.empty( ) )
-		{
-			CONSOLE_Print( "[GHOST] missing " + Prefix + "cdkeytft, skipping this battle.net connection" );
-			continue;
-		}
-
-		if( UserName.empty( ) )
-		{
-			CONSOLE_Print( "[GHOST] missing " + Prefix + "username, skipping this battle.net connection" );
-			continue;
-		}
-
-		if( UserPassword.empty( ) )
-		{
-			CONSOLE_Print( "[GHOST] missing " + Prefix + "password, skipping this battle.net connection" );
-			continue;
-		}
-
-		CONSOLE_Print( "[GHOST] found battle.net connection #" + UTIL_ToString( i ) + " for server [" + Server + "]" );
-
-		if( Locale == "system" )
-		{
-#ifdef WIN32
-			CONSOLE_Print( "[GHOST] using system locale of " + UTIL_ToString( LocaleID ) );
-#else
-			CONSOLE_Print( "[GHOST] unable to get system locale, using default locale of 1033" );
-#endif
-		}
-
-		m_BNETs.push_back( new CBNET( this, Server, ServerAlias, BNLSServer, (uint16_t)BNLSPort, (uint32_t)BNLSWardenCookie, CDKeyROC, CDKeyTFT, CountryAbbrev, Country, LocaleID, UserName, UserPassword, FirstChannel, RootAdmin, BNETCommandTrigger[0], HoldFriends, HoldClan, PublicCommands, War3Version, EXEVersion, EXEVersionHash, PasswordHashType, PVPGNRealmName, MaxMessageLength, i ) );
-	}
-
-	if( m_BNETs.empty( ) )
-		CONSOLE_Print( "[GHOST] warning - no battle.net connections found in config file" );
-
-	// extract common.j and blizzard.j from War3Patch.mpq if we can
-	// these two files are necessary for calculating "map_crc" when loading maps so we make sure to do it before loading the default map
-	// see CMap :: Load for more information
-
+        
+    m_Warcraft3Path = UTIL_AddPathSeperator( CFG->GetString( "bot_war3path", "C:\\Program Files\\Warcraft III\\" ) );
 	ExtractScripts( );
 
-	// load the default maps (note: make sure to run ExtractScripts first)
-
-	if( m_DefaultMap.size( ) < 4 || m_DefaultMap.substr( m_DefaultMap.size( ) - 4 ) != ".cfg" )
-	{
-		m_DefaultMap += ".cfg";
-		CONSOLE_Print( "[GHOST] adding \".cfg\" to default map -> new default is [" + m_DefaultMap + "]" );
-	}
-
-	CConfig MapCFG;
-	MapCFG.Read( m_MapCFGPath + m_DefaultMap );
-	m_Map = new CMap( this, &MapCFG, m_MapCFGPath + m_DefaultMap );
-
-	if( !m_AdminGameMap.empty( ) )
-	{
-		if( m_AdminGameMap.size( ) < 4 || m_AdminGameMap.substr( m_AdminGameMap.size( ) - 4 ) != ".cfg" )
-		{
-			m_AdminGameMap += ".cfg";
-			CONSOLE_Print( "[GHOST] adding \".cfg\" to default admin game map -> new default is [" + m_AdminGameMap + "]" );
-		}
-
-		CONSOLE_Print( "[GHOST] trying to load default admin game map" );
-		CConfig AdminMapCFG;
-		AdminMapCFG.Read( m_MapCFGPath + m_AdminGameMap );
-		m_AdminMap = new CMap( this, &AdminMapCFG, m_MapCFGPath + m_AdminGameMap );
-
-		if( !m_AdminMap->GetValid( ) )
-		{
-			CONSOLE_Print( "[GHOST] default admin game map isn't valid, using hardcoded admin game map instead" );
-			delete m_AdminMap;
-			m_AdminMap = new CMap( this );
-		}
-	}
-	else
-	{
-		CONSOLE_Print( "[GHOST] using hardcoded admin game map" );
-		m_AdminMap = new CMap( this );
-	}
-
-	m_AutoHostMap = new CMap( *m_Map );
-	m_SaveGame = new CSaveGame( );
-
-	// load the iptocountry data
-
-	LoadIPToCountryData( );
-
-	// create the admin game
-
-	if( m_AdminGameCreate )
-	{
-		CONSOLE_Print( "[GHOST] creating admin game" );
-		m_AdminGame = new CAdminGame( this, m_AdminMap, NULL, m_AdminGamePort, 0, "GHost++ Admin Game", m_AdminGamePassword );
-
-		if( m_AdminGamePort == m_HostPort )
-			CONSOLE_Print( "[GHOST] warning - admingame_port and bot_hostport are set to the same value, you won't be able to host any games" );
-	}
-	else
-		m_AdminGame = NULL;
-
-	if( m_BNETs.empty( ) && !m_AdminGame )
-		CONSOLE_Print( "[GHOST] warning - no battle.net connections found and no admin game created" );
-
-#ifdef GHOST_MYSQL
 	CONSOLE_Print( "[GHOST] GHost++ Version " + m_Version + " (with MySQL support)" );
-#else
-	CONSOLE_Print( "[GHOST] GHost++ Version " + m_Version + " (without MySQL support)" );
-#endif
 }
 
 CGHost :: ~CGHost( )
@@ -704,13 +474,11 @@ CGHost :: ~CGHost( )
 		delete *i;
 
 	delete m_CurrentGame;
-	delete m_AdminGame;
 
 	for( vector<CBaseGame *> :: iterator i = m_Games.begin( ); i != m_Games.end( ); i++ )
 		delete *i;
 
 	delete m_DB;
-	delete m_DBLocal;
 
 	// warning: we don't delete any entries of m_Callables here because we can't be guaranteed that the associated threads have terminated
 	// this is fine if the program is currently exiting because the OS will clean up after us
@@ -721,7 +489,6 @@ CGHost :: ~CGHost( )
 
 	delete m_Language;
 	delete m_Map;
-	delete m_AdminMap;
 	delete m_AutoHostMap;
 	delete m_SaveGame;
 }
@@ -733,12 +500,6 @@ bool CGHost :: Update( long usecBlock )
 	if( m_DB->HasError( ) )
 	{
 		CONSOLE_Print( "[GHOST] database error - " + m_DB->GetError( ) );
-		return true;
-	}
-
-	if( m_DBLocal->HasError( ) )
-	{
-		CONSOLE_Print( "[GHOST] local database error - " + m_DBLocal->GetError( ) );
 		return true;
 	}
 
@@ -761,13 +522,6 @@ bool CGHost :: Update( long usecBlock )
 			CONSOLE_Print( "[GHOST] deleting current game in preparation for exiting nicely" );
 			delete m_CurrentGame;
 			m_CurrentGame = NULL;
-		}
-
-		if( m_AdminGame )
-		{
-			CONSOLE_Print( "[GHOST] deleting admin game in preparation for exiting nicely" );
-			delete m_AdminGame;
-			m_AdminGame = NULL;
 		}
 
 		if( m_Games.empty( ) )
@@ -857,17 +611,12 @@ bool CGHost :: Update( long usecBlock )
 	if( m_CurrentGame )
 		NumFDs += m_CurrentGame->SetFD( &fd, &send_fd, &nfds );
 
-	// 3. the admin game's server and player sockets
-
-	if( m_AdminGame )
-		NumFDs += m_AdminGame->SetFD( &fd, &send_fd, &nfds );
-
-	// 4. all running games' player sockets
+	// 3. all running games' player sockets
 
 	for( vector<CBaseGame *> :: iterator i = m_Games.begin( ); i != m_Games.end( ); i++ )
 		NumFDs += (*i)->SetFD( &fd, &send_fd, &nfds );
 
-	// 5. the GProxy++ reconnect socket(s)
+	// 4. the GProxy++ reconnect socket(s)
 
 	if( m_Reconnect && m_ReconnectSocket )
 	{
@@ -945,21 +694,6 @@ bool CGHost :: Update( long usecBlock )
 		}
 		else if( m_CurrentGame )
 			m_CurrentGame->UpdatePost( &send_fd );
-	}
-
-	// update admin game
-
-	if( m_AdminGame )
-	{
-		if( m_AdminGame->Update( &fd, &send_fd ) )
-		{
-			CONSOLE_Print( "[GHOST] deleting admin game" );
-			delete m_AdminGame;
-			m_AdminGame = NULL;
-			AdminExit = true;
-		}
-		else if( m_AdminGame )
-			m_AdminGame->UpdatePost( &send_fd );
 	}
 
 	// update running games
@@ -1102,7 +836,7 @@ bool CGHost :: Update( long usecBlock )
 
 	// autohost
 
-	if( !m_AutoHostGameName.empty( ) && m_AutoHostMaximumGames != 0 && m_AutoHostAutoStartPlayers != 0 && GetTime( ) - m_LastAutoHostTime >= 30 )
+	if( !m_AutoHostGameName.empty( ) && m_AutoHostMaximumGames != 0 && m_AutoHostAutoStartPlayers != 0 && GetTime( ) - m_LastAutoHostTime >= 30 && m_NewGameId != 0 )
 	{
 		// copy all the checks from CGHost :: CreateGame here because we don't want to spam the chat when there's an error
 		// instead we fail silently and try again soon
@@ -1111,7 +845,7 @@ bool CGHost :: Update( long usecBlock )
 		{
 			if( m_AutoHostMap->GetValid( ) )
 			{
-				string GameName = m_AutoHostGameName + " #" + UTIL_ToString( m_HostCounter );
+				string GameName = m_AutoHostGameName + " - " + UTIL_ToString( m_NewGameId % 100 );
 
 				if( GameName.size( ) <= 31 )
 				{
@@ -1170,51 +904,107 @@ bool CGHost :: Update( long usecBlock )
 
 		m_LastAutoHostTime = GetTime( );
 	}
+    
+    // load a new gameid
+    if( m_NewGameId == 0 && m_LastGameIdUpdate != 0 && GetTime( ) - m_LastGameIdUpdate >= 5 )
+    {
+        m_CallableGetGameId = m_DB->ThreadedGetGameId( );
+        m_LastGameIdUpdate = 0;
+    }
 
+    if( m_CallableGetGameId && m_CallableGetGameId->GetReady( ) )
+    {
+        m_NewGameId = m_CallableGetGameId->GetResult( );
+        CONSOLE_Print("Got new gameid: " + UTIL_ToString(m_NewGameId));
+        m_DB->RecoverCallable( m_CallableGetGameId );
+        delete m_CallableGetGameId;
+        m_CallableGetGameId = NULL;
+    }
+
+    if( m_CallableGetBotConfig && m_CallableGetBotConfig->GetReady( )) {
+        map<string, string> configs = m_CallableGetBotConfig->GetResult( );
+        ParseConfigValues( configs );
+         
+        m_DB->RecoverCallable( m_CallableGetBotConfig );
+        delete m_CallableGetBotConfig;
+        m_CallableGetBotConfig = NULL;
+    }
+
+    if( m_CallableGetBotConfigText && m_CallableGetBotConfigText->GetReady( )) {
+        map<string, vector<string>> texts = m_CallableGetBotConfigText->GetResult( );
+        ParseConfigTexts( texts );
+        
+        m_DB->RecoverCallable( m_CallableGetBotConfigText );
+        delete m_CallableGetBotConfigText;
+        m_CallableGetBotConfigText = NULL;
+    }
+
+    if( m_CallableGetLanguages && m_CallableGetLanguages->GetReady( )) {
+        m_Translations = m_CallableGetLanguages->GetResult( );
+        
+        m_DB->RecoverCallable( m_CallableGetLanguages );
+        delete m_CallableGetLanguages;
+        m_CallableGetLanguages = NULL;
+    }
+
+    if( m_CallableGetMapConfig && m_CallableGetMapConfig->GetReady( )) {
+        if(! m_CurrentGame ){
+            m_Map = new CMap( this, m_CallableGetMapConfig->GetResult( ) );
+            m_AutoHostMap = new CMap( *m_Map );
+        }
+        
+        m_DB->RecoverCallable( m_CallableGetMapConfig );
+        delete m_CallableGetMapConfig;
+        m_CallableGetMapConfig = NULL;
+    }
+    
+    if( m_CallableAdminLists && m_CallableAdminLists->GetReady( )) {
+        m_AdminList = m_CallableAdminLists->GetResult( );
+        CONSOLE_Print("[OHSystem] Loaded " + UTIL_ToString(m_AdminList.size()) + " users.");
+        
+        m_DB->RecoverCallable( m_CallableAdminLists );
+        delete m_CallableAdminLists;
+        m_CallableAdminLists = NULL;
+    }
+    
+    if( m_CallableGetAliases && m_CallableGetAliases->GetReady( )) {
+        m_Aliases = m_CallableGetAliases->GetResult( );
+        CONSOLE_Print("[OHSystem] Loaded " + UTIL_ToString(m_Aliases.size()) + " aliases.");
+        
+        m_DB->RecoverCallable( m_CallableGetAliases );
+        delete m_CallableGetAliases;
+        m_CallableGetAliases = NULL;
+    }
+    
 	return m_Exiting || AdminExit || BNETExit;
 }
 
 void CGHost :: EventBNETConnecting( CBNET *bnet )
 {
-	if( m_AdminGame )
-		m_AdminGame->SendAllChat( m_Language->ConnectingToBNET( bnet->GetServer( ) ) );
-
 	if( m_CurrentGame )
 		m_CurrentGame->SendAllChat( m_Language->ConnectingToBNET( bnet->GetServer( ) ) );
 }
 
 void CGHost :: EventBNETConnected( CBNET *bnet )
 {
-	if( m_AdminGame )
-		m_AdminGame->SendAllChat( m_Language->ConnectedToBNET( bnet->GetServer( ) ) );
-
 	if( m_CurrentGame )
 		m_CurrentGame->SendAllChat( m_Language->ConnectedToBNET( bnet->GetServer( ) ) );
 }
 
 void CGHost :: EventBNETDisconnected( CBNET *bnet )
 {
-	if( m_AdminGame )
-		m_AdminGame->SendAllChat( m_Language->DisconnectedFromBNET( bnet->GetServer( ) ) );
-
 	if( m_CurrentGame )
 		m_CurrentGame->SendAllChat( m_Language->DisconnectedFromBNET( bnet->GetServer( ) ) );
 }
 
 void CGHost :: EventBNETLoggedIn( CBNET *bnet )
 {
-	if( m_AdminGame )
-		m_AdminGame->SendAllChat( m_Language->LoggedInToBNET( bnet->GetServer( ) ) );
-
 	if( m_CurrentGame )
 		m_CurrentGame->SendAllChat( m_Language->LoggedInToBNET( bnet->GetServer( ) ) );
 }
 
 void CGHost :: EventBNETGameRefreshed( CBNET *bnet )
 {
-	if( m_AdminGame )
-		m_AdminGame->SendAllChat( m_Language->BNETGameHostingSucceeded( bnet->GetServer( ) ) );
-
 	if( m_CurrentGame )
 		m_CurrentGame->EventGameRefreshed( bnet->GetServer( ) );
 }
@@ -1231,9 +1021,6 @@ void CGHost :: EventBNETGameRefreshFailed( CBNET *bnet )
 				(*i)->QueueChatCommand( m_Language->UnableToCreateGameTryAnotherName( bnet->GetServer( ), m_CurrentGame->GetGameName( ) ), m_CurrentGame->GetCreatorName( ), true );
 		}
 
-		if( m_AdminGame )
-			m_AdminGame->SendAllChat( m_Language->BNETGameHostingFailed( bnet->GetServer( ), m_CurrentGame->GetGameName( ) ) );
-
 		m_CurrentGame->SendAllChat( m_Language->UnableToCreateGameTryAnotherName( bnet->GetServer( ), m_CurrentGame->GetGameName( ) ) );
 
 		// we take the easy route and simply close the lobby if a refresh fails
@@ -1249,54 +1036,15 @@ void CGHost :: EventBNETGameRefreshFailed( CBNET *bnet )
 
 void CGHost :: EventBNETConnectTimedOut( CBNET *bnet )
 {
-	if( m_AdminGame )
-		m_AdminGame->SendAllChat( m_Language->ConnectingToBNETTimedOut( bnet->GetServer( ) ) );
-
 	if( m_CurrentGame )
 		m_CurrentGame->SendAllChat( m_Language->ConnectingToBNETTimedOut( bnet->GetServer( ) ) );
 }
 
-void CGHost :: EventBNETWhisper( CBNET *bnet, string user, string message )
-{
-	if( m_AdminGame )
-	{
-		m_AdminGame->SendAdminChat( "[W: " + bnet->GetServerAlias( ) + "] [" + user + "] " + message );
+void CGHost :: EventBNETWhisper( CBNET *bnet, string user, string message ){}
 
-		if( m_CurrentGame )
-			m_CurrentGame->SendLocalAdminChat( "[W: " + bnet->GetServerAlias( ) + "] [" + user + "] " + message );
+void CGHost :: EventBNETChat( CBNET *bnet, string user, string message ){}
 
-		for( vector<CBaseGame *> :: iterator i = m_Games.begin( ); i != m_Games.end( ); i++ )
-			(*i)->SendLocalAdminChat( "[W: " + bnet->GetServerAlias( ) + "] [" + user + "] " + message );
-	}
-}
-
-void CGHost :: EventBNETChat( CBNET *bnet, string user, string message )
-{
-	if( m_AdminGame )
-	{
-		m_AdminGame->SendAdminChat( "[L: " + bnet->GetServerAlias( ) + "] [" + user + "] " + message );
-
-		if( m_CurrentGame )
-			m_CurrentGame->SendLocalAdminChat( "[L: " + bnet->GetServerAlias( ) + "] [" + user + "] " + message );
-
-		for( vector<CBaseGame *> :: iterator i = m_Games.begin( ); i != m_Games.end( ); i++ )
-			(*i)->SendLocalAdminChat( "[L: " + bnet->GetServerAlias( ) + "] [" + user + "] " + message );
-	}
-}
-
-void CGHost :: EventBNETEmote( CBNET *bnet, string user, string message )
-{
-	if( m_AdminGame )
-	{
-		m_AdminGame->SendAdminChat( "[E: " + bnet->GetServerAlias( ) + "] [" + user + "] " + message );
-
-		if( m_CurrentGame )
-			m_CurrentGame->SendLocalAdminChat( "[E: " + bnet->GetServerAlias( ) + "] [" + user + "] " + message );
-
-		for( vector<CBaseGame *> :: iterator i = m_Games.begin( ); i != m_Games.end( ); i++ )
-			(*i)->SendLocalAdminChat( "[E: " + bnet->GetServerAlias( ) + "] [" + user + "] " + message );
-	}
-}
+void CGHost :: EventBNETEmote( CBNET *bnet, string user, string message ){}
 
 void CGHost :: EventGameDeleted( CBaseGame *game )
 {
@@ -1311,77 +1059,9 @@ void CGHost :: EventGameDeleted( CBaseGame *game )
 
 void CGHost :: ReloadConfigs( )
 {
-	CConfig CFG;
-	CFG.Read( "default.cfg" );
-	CFG.Read( gCFGFile );
-	SetConfigs( &CFG );
-}
-
-void CGHost :: SetConfigs( CConfig *CFG )
-{
-	// this doesn't set EVERY config value since that would potentially require reconfiguring the battle.net connections
-	// it just set the easily reloadable values
-
-	m_LanguageFile = CFG->GetString( "bot_language", "language.cfg" );
-	delete m_Language;
-	m_Language = new CLanguage( m_LanguageFile );
-	m_Warcraft3Path = UTIL_AddPathSeperator( CFG->GetString( "bot_war3path", "C:\\Program Files\\Warcraft III\\" ) );
-	m_BindAddress = CFG->GetString( "bot_bindaddress", string( ) );
-	m_ReconnectWaitTime = CFG->GetInt( "bot_reconnectwaittime", 3 );
-	m_MaxGames = CFG->GetInt( "bot_maxgames", 5 );
-	string BotCommandTrigger = CFG->GetString( "bot_commandtrigger", "!" );
-
-	if( BotCommandTrigger.empty( ) )
-		BotCommandTrigger = "!";
-
-	m_CommandTrigger = BotCommandTrigger[0];
-	m_MapCFGPath = UTIL_AddPathSeperator( CFG->GetString( "bot_mapcfgpath", string( ) ) );
-	m_SaveGamePath = UTIL_AddPathSeperator( CFG->GetString( "bot_savegamepath", string( ) ) );
-	m_MapPath = UTIL_AddPathSeperator( CFG->GetString( "bot_mappath", string( ) ) );
-	m_SaveReplays = CFG->GetInt( "bot_savereplays", 0 ) == 0 ? false : true;
-	m_ReplayPath = UTIL_AddPathSeperator( CFG->GetString( "bot_replaypath", string( ) ) );
-	m_VirtualHostName = CFG->GetString( "bot_virtualhostname", "|cFF4080C0GHost" );
-	m_HideIPAddresses = CFG->GetInt( "bot_hideipaddresses", 0 ) == 0 ? false : true;
-	m_CheckMultipleIPUsage = CFG->GetInt( "bot_checkmultipleipusage", 1 ) == 0 ? false : true;
-
-	if( m_VirtualHostName.size( ) > 15 )
-	{
-		m_VirtualHostName = "|cFF4080C0GHost";
-		CONSOLE_Print( "[GHOST] warning - bot_virtualhostname is longer than 15 characters, using default virtual host name" );
-	}
-
-	m_SpoofChecks = CFG->GetInt( "bot_spoofchecks", 2 );
-	m_RequireSpoofChecks = CFG->GetInt( "bot_requirespoofchecks", 0 ) == 0 ? false : true;
-	m_ReserveAdmins = CFG->GetInt( "bot_reserveadmins", 1 ) == 0 ? false : true;
-	m_RefreshMessages = CFG->GetInt( "bot_refreshmessages", 0 ) == 0 ? false : true;
-	m_AutoLock = CFG->GetInt( "bot_autolock", 0 ) == 0 ? false : true;
-	m_AutoSave = CFG->GetInt( "bot_autosave", 0 ) == 0 ? false : true;
-	m_AllowDownloads = CFG->GetInt( "bot_allowdownloads", 0 );
-	m_PingDuringDownloads = CFG->GetInt( "bot_pingduringdownloads", 0 ) == 0 ? false : true;
-	m_MaxDownloaders = CFG->GetInt( "bot_maxdownloaders", 3 );
-	m_MaxDownloadSpeed = CFG->GetInt( "bot_maxdownloadspeed", 100 );
-	m_LCPings = CFG->GetInt( "bot_lcpings", 1 ) == 0 ? false : true;
-	m_AutoKickPing = CFG->GetInt( "bot_autokickping", 400 );
-	m_BanMethod = CFG->GetInt( "bot_banmethod", 1 );
-	m_IPBlackListFile = CFG->GetString( "bot_ipblacklistfile", "ipblacklist.txt" );
-	m_LobbyTimeLimit = CFG->GetInt( "bot_lobbytimelimit", 10 );
-	m_Latency = CFG->GetInt( "bot_latency", 100 );
-	m_SyncLimit = CFG->GetInt( "bot_synclimit", 50 );
-	m_VoteKickAllowed = CFG->GetInt( "bot_votekickallowed", 1 ) == 0 ? false : true;
-	m_VoteKickPercentage = CFG->GetInt( "bot_votekickpercentage", 100 );
-
-	if( m_VoteKickPercentage > 100 )
-	{
-		m_VoteKickPercentage = 100;
-		CONSOLE_Print( "[GHOST] warning - bot_votekickpercentage is greater than 100, using 100 instead" );
-	}
-
-	m_MOTDFile = CFG->GetString( "bot_motdfile", "motd.txt" );
-	m_GameLoadedFile = CFG->GetString( "bot_gameloadedfile", "gameloaded.txt" );
-	m_GameOverFile = CFG->GetString( "bot_gameoverfile", "gameover.txt" );
-	m_LocalAdminMessages = CFG->GetInt( "bot_localadminmessages", 1 ) == 0 ? false : true;
-	m_TCPNoDelay = CFG->GetInt( "tcp_nodelay", 0 ) == 0 ? false : true;
-	m_MatchMakingMethod = CFG->GetInt( "bot_matchmakingmethod", 1 );
+    m_CallableGetBotConfig = m_DB->ThreadedGetBotConfigs( );
+    m_CallableGetBotConfigText = m_DB->ThreadedGetBotConfigTexts( );
+    m_CallableGetLanguages = m_DB->ThreadedGetLanguages( );
 }
 
 void CGHost :: ExtractScripts( )
@@ -1454,73 +1134,6 @@ void CGHost :: ExtractScripts( )
 		CONSOLE_Print( "[GHOST] warning - unable to load MPQ file [" + PatchMPQFileName + "] - error code " + UTIL_ToString( GetLastError( ) ) );
 }
 
-void CGHost :: LoadIPToCountryData( )
-{
-	ifstream in;
-	in.open( "ip-to-country.csv" );
-
-	if( in.fail( ) )
-		CONSOLE_Print( "[GHOST] warning - unable to read file [ip-to-country.csv], iptocountry data not loaded" );
-	else
-	{
-		CONSOLE_Print( "[GHOST] started loading [ip-to-country.csv]" );
-
-		// the begin and commit statements are optimizations
-		// we're about to insert ~4 MB of data into the database so if we allow the database to treat each insert as a transaction it will take a LONG time
-		// todotodo: handle begin/commit failures a bit more gracefully
-
-		if( !m_DBLocal->Begin( ) )
-			CONSOLE_Print( "[GHOST] warning - failed to begin local database transaction, iptocountry data not loaded" );
-		else
-		{
-			unsigned char Percent = 0;
-			string Line;
-			string IP1;
-			string IP2;
-			string Country;
-			CSVParser parser;
-
-			// get length of file for the progress meter
-
-			in.seekg( 0, ios :: end );
-			uint32_t FileLength = in.tellg( );
-			in.seekg( 0, ios :: beg );
-
-			while( !in.eof( ) )
-			{
-				getline( in, Line );
-
-				if( Line.empty( ) )
-					continue;
-
-				parser << Line;
-				parser >> IP1;
-				parser >> IP2;
-				parser >> Country;
-				m_DBLocal->FromAdd( UTIL_ToUInt32( IP1 ), UTIL_ToUInt32( IP2 ), Country );
-
-				// it's probably going to take awhile to load the iptocountry data (~10 seconds on my 3.2 GHz P4 when using SQLite3)
-				// so let's print a progress meter just to keep the user from getting worried
-
-				unsigned char NewPercent = (unsigned char)( (float)in.tellg( ) / FileLength * 100 );
-
-				if( NewPercent != Percent && NewPercent % 10 == 0 )
-				{
-					Percent = NewPercent;
-					CONSOLE_Print( "[GHOST] iptocountry data: " + UTIL_ToString( Percent ) + "% loaded" );
-				}
-			}
-
-			if( !m_DBLocal->Commit( ) )
-				CONSOLE_Print( "[GHOST] warning - failed to commit local database transaction, iptocountry data not loaded" );
-			else
-				CONSOLE_Print( "[GHOST] finished loading [ip-to-country.csv]" );
-		}
-
-		in.close( );
-	}
-}
-
 void CGHost :: CreateGame( CMap *map, unsigned char gameState, bool saveGame, string gameName, string ownerName, string creatorName, string creatorServer, bool whisper )
 {
 	if( !m_Enabled )
@@ -1530,9 +1143,6 @@ void CGHost :: CreateGame( CMap *map, unsigned char gameState, bool saveGame, st
 			if( (*i)->GetServer( ) == creatorServer )
 				(*i)->QueueChatCommand( m_Language->UnableToCreateGameDisabled( gameName ), creatorName, whisper );
 		}
-
-		if( m_AdminGame )
-			m_AdminGame->SendAllChat( m_Language->UnableToCreateGameDisabled( gameName ) );
 
 		return;
 	}
@@ -1545,9 +1155,6 @@ void CGHost :: CreateGame( CMap *map, unsigned char gameState, bool saveGame, st
 				(*i)->QueueChatCommand( m_Language->UnableToCreateGameNameTooLong( gameName ), creatorName, whisper );
 		}
 
-		if( m_AdminGame )
-			m_AdminGame->SendAllChat( m_Language->UnableToCreateGameNameTooLong( gameName ) );
-
 		return;
 	}
 
@@ -1558,9 +1165,6 @@ void CGHost :: CreateGame( CMap *map, unsigned char gameState, bool saveGame, st
 			if( (*i)->GetServer( ) == creatorServer )
 				(*i)->QueueChatCommand( m_Language->UnableToCreateGameInvalidMap( gameName ), creatorName, whisper );
 		}
-
-		if( m_AdminGame )
-			m_AdminGame->SendAllChat( m_Language->UnableToCreateGameInvalidMap( gameName ) );
 
 		return;
 	}
@@ -1575,30 +1179,6 @@ void CGHost :: CreateGame( CMap *map, unsigned char gameState, bool saveGame, st
 					(*i)->QueueChatCommand( m_Language->UnableToCreateGameInvalidSaveGame( gameName ), creatorName, whisper );
 			}
 
-			if( m_AdminGame )
-				m_AdminGame->SendAllChat( m_Language->UnableToCreateGameInvalidSaveGame( gameName ) );
-
-			return;
-		}
-
-		string MapPath1 = m_SaveGame->GetMapPath( );
-		string MapPath2 = map->GetMapPath( );
-		transform( MapPath1.begin( ), MapPath1.end( ), MapPath1.begin( ), (int(*)(int))tolower );
-		transform( MapPath2.begin( ), MapPath2.end( ), MapPath2.begin( ), (int(*)(int))tolower );
-
-		if( MapPath1 != MapPath2 )
-		{
-			CONSOLE_Print( "[GHOST] path mismatch, saved game path is [" + MapPath1 + "] but map path is [" + MapPath2 + "]" );
-
-			for( vector<CBNET *> :: iterator i = m_BNETs.begin( ); i != m_BNETs.end( ); i++ )
-			{
-				if( (*i)->GetServer( ) == creatorServer )
-					(*i)->QueueChatCommand( m_Language->UnableToCreateGameSaveGameMapMismatch( gameName ), creatorName, whisper );
-			}
-
-			if( m_AdminGame )
-				m_AdminGame->SendAllChat( m_Language->UnableToCreateGameSaveGameMapMismatch( gameName ) );
-
 			return;
 		}
 
@@ -1609,9 +1189,6 @@ void CGHost :: CreateGame( CMap *map, unsigned char gameState, bool saveGame, st
 				if( (*i)->GetServer( ) == creatorServer )
 					(*i)->QueueChatCommand( m_Language->UnableToCreateGameMustEnforceFirst( gameName ), creatorName, whisper );
 			}
-
-			if( m_AdminGame )
-				m_AdminGame->SendAllChat( m_Language->UnableToCreateGameMustEnforceFirst( gameName ) );
 
 			return;
 		}
@@ -1625,9 +1202,6 @@ void CGHost :: CreateGame( CMap *map, unsigned char gameState, bool saveGame, st
 				(*i)->QueueChatCommand( m_Language->UnableToCreateGameAnotherGameInLobby( gameName, m_CurrentGame->GetDescription( ) ), creatorName, whisper );
 		}
 
-		if( m_AdminGame )
-			m_AdminGame->SendAllChat( m_Language->UnableToCreateGameAnotherGameInLobby( gameName, m_CurrentGame->GetDescription( ) ) );
-
 		return;
 	}
 
@@ -1639,18 +1213,15 @@ void CGHost :: CreateGame( CMap *map, unsigned char gameState, bool saveGame, st
 				(*i)->QueueChatCommand( m_Language->UnableToCreateGameMaxGamesReached( gameName, UTIL_ToString( m_MaxGames ) ), creatorName, whisper );
 		}
 
-		if( m_AdminGame )
-			m_AdminGame->SendAllChat( m_Language->UnableToCreateGameMaxGamesReached( gameName, UTIL_ToString( m_MaxGames ) ) );
-
 		return;
 	}
 
 	CONSOLE_Print( "[GHOST] creating game [" + gameName + "]" );
 
 	if( saveGame )
-		m_CurrentGame = new CGame( this, map, m_SaveGame, m_HostPort, gameState, gameName, ownerName, creatorName, creatorServer );
+		m_CurrentGame = new CGame( this, map, m_SaveGame, m_HostPort, gameState, gameName, ownerName, creatorName, creatorServer, m_NewGameId );
 	else
-		m_CurrentGame = new CGame( this, map, NULL, m_HostPort, gameState, gameName, ownerName, creatorName, creatorServer );
+		m_CurrentGame = new CGame( this, map, NULL, m_HostPort, gameState, gameName, ownerName, creatorName, creatorServer, m_NewGameId );
 
 	// todotodo: check if listening failed and report the error to the user
 
@@ -1687,14 +1258,6 @@ void CGHost :: CreateGame( CMap *map, unsigned char gameState, bool saveGame, st
 			(*i)->QueueGameCreate( gameState, gameName, string( ), map, NULL, m_CurrentGame->GetHostCounter( ) );
 	}
 
-	if( m_AdminGame )
-	{
-		if( gameState == GAME_PRIVATE )
-			m_AdminGame->SendAllChat( m_Language->CreatingPrivateGame( gameName, ownerName ) );
-		else if( gameState == GAME_PUBLIC )
-			m_AdminGame->SendAllChat( m_Language->CreatingPublicGame( gameName, ownerName ) );
-	}
-
 	// if we're creating a private game we don't need to send any game refresh messages so we can rejoin the chat immediately
 	// unfortunately this doesn't work on PVPGN servers because they consider an enterchat message to be a gameuncreate message when in a game
 	// so don't rejoin the chat if we're using PVPGN
@@ -1718,4 +1281,269 @@ void CGHost :: CreateGame( CMap *map, unsigned char gameState, bool saveGame, st
 		if( (*i)->GetHoldClan( ) )
 			(*i)->HoldClan( m_CurrentGame );
 	}
+    
+    m_NewGameId = 0;
+}
+
+void CGHost :: ParseConfigValues( map<string, string> configs )
+{
+    typedef map<string, string>::iterator config_iterator;
+    
+    for(config_iterator iterator = configs.begin(); iterator != configs.end(); iterator++)
+    {
+        if(iterator->first == "bot_language") {
+            delete m_Language;
+            m_Language = new CLanguage( iterator->second );
+        } else if(iterator->first == "bot_tft") {
+            m_TFT = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_bindaddress") {
+            m_BindAddress = iterator->second;
+        } else if(iterator->first == "bot_hostport") {
+            m_HostPort = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_reconnect") {
+            m_Reconnect = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_reconnectport") {
+            m_ReconnectPort = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_reconnectwaittime") {
+            m_ReconnectWaitTime = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_maxgames") {
+            m_MaxGames = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_commandtrigger") {
+            m_CommandTrigger = iterator->second[0];
+        } else if(iterator->first == "bot_mapcfgpath") {
+            m_MapCFGPath = iterator->second;
+        } else if(iterator->first == "bot_savegamepath") {
+            m_SaveGamePath = iterator->second;
+        } else if(iterator->first == "bot_mappath") {
+            m_MapPath = iterator->second;
+        } else if(iterator->first == "bot_savereplays") {
+            m_SaveReplays = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_replaypath") {
+            m_ReplayPath = iterator->second;
+        } else if(iterator->first == "replay_war3version") {
+            m_ReplayWar3Version = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "replay_buildnumber") {
+            m_ReplayBuildNumber = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_virtualhostname") {
+            m_VirtualHostName = iterator->second;
+        } else if(iterator->first == "bot_hideipaddresses") {
+            m_HideIPAddresses = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_checkmultipleipusage") {
+            m_CheckMultipleIPUsage = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_spoofchecks") {
+            m_SpoofChecks = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_requirespoofchecks") {
+            m_RequireSpoofChecks = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_reserveadmins") {
+            m_ReserveAdmins = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_refreshmessages") {
+            m_RefreshMessages = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_autolock") {
+            m_AutoLock = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_autosave") {
+            m_AutoSave = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_allowdownloads") {
+            m_AllowDownloads = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_pingduringdownloads") {
+            m_PingDuringDownloads = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_maxdownloaders") {
+            m_MaxDownloaders = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_maxdownloadspeed") {
+            m_MaxDownloadSpeed = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_lcpings") {
+            m_LCPings = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_autokickping") {
+            m_AutoKickPing = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_banmethod") {
+            m_BanMethod = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_ipblacklistfile") {
+            m_IPBlackListFile = iterator->second;
+        } else if(iterator->first == "bot_lobbytimelimit") {
+            m_LobbyTimeLimit = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_latency") {
+            m_Latency = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_synclimit") {
+            m_SyncLimit = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_votekickallowed") {
+            m_VoteKickAllowed = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_votekickpercentage") {
+            m_VoteKickPercentage = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_defaultmap") {
+            m_DefaultMap = iterator->second;
+        } else if(iterator->first == "tcp_nodelay") {
+            m_TCPNoDelay = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "bot_matchmakingmethod") {
+            m_MatchMakingMethod = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "lan_war3version") {
+            m_LANWar3Version = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "udp_broadcasttarget") {
+            m_UDPSocket = new CUDPSocket( );
+            m_UDPSocket->SetBroadcastTarget( iterator->second );
+        } else if(iterator->first == "udp_dontroute") {
+            m_UDPSocket->SetDontRoute( UTIL_ToUInt32(iterator->second) );
+        } else if(iterator->first == "autohost_maxgames") {
+            m_AutoHostMaximumGames = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "autohost_startplayers") {
+            m_AutoHostAutoStartPlayers = UTIL_ToUInt32(iterator->second);
+        } else if(iterator->first == "autohost_gamename") {
+            m_AutoHostGameName = iterator->second;
+        } else if(iterator->first == "autohost_owner") {
+            m_AutoHostOwner = iterator->second;
+        } else if(iterator->first.substr(0, 4) == "bnet") {
+            int bnetNumber = 0;
+            int pos = 5;
+            
+            if(iterator->first.substr(4, 1) != "_") {
+                string swaggynumber = iterator->first.substr(4, 1);
+                bnetNumber = UTIL_ToUInt32(swaggynumber);
+                pos = 6;
+            }
+            m_BNetCollection[bnetNumber][iterator->first.substr(pos)] = iterator->second;
+        } else if(iterator->first == "ohs_alias_id") {
+            m_AliasId = UTIL_ToUInt32(iterator->second);
+        }
+    }
+    
+    ConnectToBNets( );
+    
+    if(! m_CurrentGame) {
+        m_CallableGetMapConfig = m_DB->ThreadedGetMapConfig( m_DefaultMap );
+ 
+    	m_SaveGame = new CSaveGame( );
+    }
+}
+
+void CGHost :: ParseConfigTexts( map<string, vector<string>> texts )
+{
+    typedef map<string, vector<string>>::iterator text_iterator;
+    
+    for(text_iterator iterator = texts.begin(); iterator != texts.end(); iterator++)
+    {
+        if(iterator->first == "gameloaded") {
+            m_GameLoaded = iterator->second;
+        } else if(iterator->first == "gameover") {
+            m_GameOver = iterator->second;
+        } else if(iterator->first == "motd") {
+            m_MOTD = iterator->second;
+        } else {
+            CONSOLE_Print("Didn't use '" + iterator->first + "' data!");
+        }
+    }
+}
+
+
+void CGHost :: ConnectToBNets( )
+{
+    typedef map<int, map<string, string>>::iterator bnet_iterator;
+    uint32_t counter = 0;
+    for(bnet_iterator i = m_BNetCollection.begin(); i != m_BNetCollection.end(); i++)
+    {
+	string Server = "";
+	string ServerAlias = "";
+	string CDKeyROC = "";
+	string CDKeyTFT = "";
+	string CountryAbbrev = "DE";
+	string Country = "Germany";
+	string Locale = "1031";
+	string UserName = "";
+	string UserPassword = "";
+	string FirstChannel = "The Void";
+	string RootAdmin = "";
+	string BNETCommandTrigger = ".";
+	bool HoldFriends = false;
+	bool HoldClan = false;
+	bool PublicCommands = false;
+	unsigned char War3Version = 26;
+	BYTEARRAY EXEVersion = {};
+	BYTEARRAY EXEVersionHash = {};
+	string PasswordHashType = "";
+ 	string PVPGNRealmName = "PvPGN Realm";
+ 	uint32_t MaxMessageLength = 200;
+         
+        typedef map<string, string>::iterator options_iterator;
+        for(options_iterator j = i->second.begin(); j != i->second.end(); j++)
+        {
+            size_t pos = j->first.find_first_of("_") != string::npos;
+            string key = j->first.substr(pos);
+            if(key == "server" ) {
+                Server = j->second;
+            } else if(key == "serveralias") {
+                ServerAlias = j->second;
+            } else if(key == "cdkeyroc") {
+                CDKeyROC = j->second;
+            } else if(key == "cdkeytft") {
+                CDKeyTFT = j->second;
+            } else if(key == "countryabbrev") {
+                CountryAbbrev = j->second;
+            } else if(key == "country") {
+                Country = j->second;
+            } else if(key == "locale") {
+                Locale = j->second;
+            } else if(key == "username") {
+                UserName = j->second;
+            } else if(key == "password") {
+                UserPassword = j->second;
+            } else if(key == "firstchannel") {
+                FirstChannel = j->second;
+            } else if(key == "rootadmin") {
+                RootAdmin = j->second;
+            } else if(key == "commandtrigger") {
+                BNETCommandTrigger = j->second[0];
+            } else if(key == "holdfriends") {
+                HoldFriends = UTIL_ToUInt32(j->second) == 0 ? false : true;
+            } else if(key == "holdclan") {
+                HoldClan = UTIL_ToUInt32(j->second) == 0 ? false : true;
+            } else if(key == "publiccommands") {
+                PublicCommands = UTIL_ToUInt32(j->second) == 0 ? false : true;
+            } else if(key == "customwar3version") {
+                War3Version = UTIL_ToUInt32(j->second);
+            } else if(key == "customexeversion") {
+                EXEVersion = UTIL_ExtractNumbers(j->second, 4);
+            } else if(key == "customexeversionhash") {
+                EXEVersionHash = UTIL_ExtractNumbers(j->second, 4);
+            } else if(key == "custompasswordhashtype") {
+                PasswordHashType = j->second;
+            } else if(key == "custompvpgnrealmname") {
+                PVPGNRealmName = j->second;
+            } else if(key == "custommaxmessagelength") {
+                MaxMessageLength = UTIL_ToUInt32(j->second);
+            }
+        }
+        
+        if( Server.empty( ) )
+	{
+	    CONSOLE_Print("Didn't found 'Server'");
+            break;
+	}
+
+        if( CDKeyROC.empty( ) )
+        {
+            CONSOLE_Print( "[GHOST] missing cdkeyroc, skipping this battle.net connection" );
+            continue;
+        }
+
+        if( m_TFT && CDKeyTFT.empty( ) )
+        {
+            CONSOLE_Print( "[GHOST] missing cdkeytft, skipping this battle.net connection" );
+            continue;
+        }
+
+        if( UserName.empty( ) )
+        {
+            CONSOLE_Print( "[GHOST] missing username, skipping this battle.net connection" );
+            continue;
+        }
+
+        if( UserPassword.empty( ) )
+        {
+            CONSOLE_Print( "[GHOST] missing password, skipping this battle.net connection" );
+            continue;
+        }
+
+        CONSOLE_Print( "[GHOST] found battle.net connection for server [" + Server + "]" );
+
+        m_BNETs.push_back( new CBNET( this, Server, ServerAlias, "", 0, 0, CDKeyROC, CDKeyTFT, CountryAbbrev, Country, UTIL_ToUInt32(Locale), UserName, UserPassword, FirstChannel, RootAdmin, BNETCommandTrigger[0], HoldFriends, HoldClan, PublicCommands, War3Version, EXEVersion, EXEVersionHash, PasswordHashType, PVPGNRealmName, MaxMessageLength, counter) );
+        counter++;
+    }
+    
 }

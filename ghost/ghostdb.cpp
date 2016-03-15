@@ -23,6 +23,8 @@
 #include "config.h"
 #include "ghostdb.h"
 
+#include <initializer_list>
+
 //
 // CGHostDB
 //
@@ -72,9 +74,9 @@ bool CGHostDB :: AdminRemove( string server, string user )
 	return false;
 }
 
-vector<string> CGHostDB :: AdminList( string server )
+map<string, uint32_t> CGHostDB :: AdminList( string server )
 {
-	return vector<string>( );
+	return {};
 }
 
 uint32_t CGHostDB :: BanCount( string server )
@@ -107,12 +109,12 @@ vector<CDBBan *> CGHostDB :: BanList( string server )
 	return vector<CDBBan *>( );
 }
 
-uint32_t CGHostDB :: GameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver )
+uint32_t CGHostDB :: GameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid )
 {
 	return 0;
 }
 
-uint32_t CGHostDB :: GamePlayerAdd( uint32_t gameid, string name, string ip, uint32_t spoofed, string spoofedrealm, uint32_t reserved, uint32_t loadingtime, uint32_t left, string leftreason, uint32_t team, uint32_t colour )
+uint32_t CGHostDB :: GamePlayerAdd( uint32_t gameid, string name, string ip, uint32_t spoofed, string spoofedrealm, uint32_t reserved, uint32_t loadingtime, uint32_t left, string leftreason, uint32_t team, uint32_t colour, uint32_t playerid )
 {
 	return 0;
 }
@@ -182,9 +184,54 @@ bool CGHostDB :: W3MMDVarAdd( uint32_t gameid, map<VarP,string> var_strings )
 	return false;
 }
 
+uint32_t CGHostDB :: GetPlayerId( string user )
+{
+    return 0;
+}
+
+uint32_t CGHostDB :: CreatePlayerId( string user, string ip, string realm )
+{
+    return 0;
+}
+
+uint32_t CGHostDB :: GetGameId( )
+{
+    return 0;
+}
+
+map<string, string> CGHostDB :: GetBotConfigs( )
+{
+    return {};
+}
+
+map<string, vector<string> > CGHostDB :: GetBotConfigTexts( ) 
+{
+    return {};
+}
+
+map<string, map<uint32_t, string> > CGHostDB :: GetLanguages( ) 
+{
+    return {};
+}
+
+map<uint32_t, string> CGHostDB :: GetAliases( ) 
+{
+    return {};
+}
+
 void CGHostDB :: CreateThread( CBaseCallable *callable )
 {
 	callable->SetReady( true );
+}
+
+map<string, string> CGHostDB :: GetMapConfig( string configname )
+{
+    return {};
+}
+
+string CGHostDB :: GameUpdate( uint32_t hostcounter, uint32_t lobby, string map_type, uint32_t duration, string gamename, string ownername, string creatorname, string map, uint32_t players, uint32_t total, vector<PlayerOfPlayerList> playerlist )
+{
+    return "";
 }
 
 CCallableAdminCount *CGHostDB :: ThreadedAdminCount( string server )
@@ -242,12 +289,12 @@ CCallableBanList *CGHostDB :: ThreadedBanList( string server )
 	return NULL;
 }
 
-CCallableGameAdd *CGHostDB :: ThreadedGameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver )
+CCallableGameAdd *CGHostDB :: ThreadedGameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid )
 {
 	return NULL;
 }
 
-CCallableGamePlayerAdd *CGHostDB :: ThreadedGamePlayerAdd( uint32_t gameid, string name, string ip, uint32_t spoofed, string spoofedrealm, uint32_t reserved, uint32_t loadingtime, uint32_t left, string leftreason, uint32_t team, uint32_t colour )
+CCallableGamePlayerAdd *CGHostDB :: ThreadedGamePlayerAdd( uint32_t gameid, string name, string ip, uint32_t spoofed, string spoofedrealm, uint32_t reserved, uint32_t loadingtime, uint32_t left, string leftreason, uint32_t team, uint32_t colour, uint32_t playerid )
 {
 	return NULL;
 }
@@ -298,6 +345,51 @@ CCallableW3MMDVarAdd *CGHostDB :: ThreadedW3MMDVarAdd( uint32_t gameid, map<VarP
 }
 
 CCallableW3MMDVarAdd *CGHostDB :: ThreadedW3MMDVarAdd( uint32_t gameid, map<VarP,string> var_strings )
+{
+	return NULL;
+}
+
+CCallableGetPlayerId *CGHostDB :: ThreadedGetPlayerId( string user )
+{
+	return NULL;
+}
+
+CCallableCreatePlayerId *CGHostDB :: ThreadedCreatePlayerId( string user, string ip, string realm )
+{
+	return NULL;
+}
+
+CCallableGetGameId *CGHostDB :: ThreadedGetGameId( )
+{
+	return NULL;
+}
+
+CCallableGetBotConfigs *CGHostDB :: ThreadedGetBotConfigs( )
+{
+	return NULL;
+}
+
+CCallableGetBotConfigTexts *CGHostDB :: ThreadedGetBotConfigTexts( )
+{
+	return NULL;
+}
+
+CCallableGetLanguages *CGHostDB :: ThreadedGetLanguages( )
+{
+	return NULL;
+}
+
+CCallableGetMapConfig *CGHostDB :: ThreadedGetMapConfig( string configname )
+{
+	return NULL;
+}
+
+CCallableGameUpdate *CGHostDB :: ThreadedGameUpdate( uint32_t hostcounter, uint32_t lobby, string map_type, uint32_t duration, string gamename, string ownername, string creatorname, string map, uint32_t players, uint32_t total, vector<PlayerOfPlayerList> playerlist )
+{
+    return NULL;
+}
+
+CCallableGetAliases *CGHostDB :: ThreadedGetAliases( )
 {
 	return NULL;
 }
@@ -417,6 +509,51 @@ CCallableW3MMDVarAdd :: ~CCallableW3MMDVarAdd( )
 
 }
 
+CCallableGetPlayerId :: ~CCallableGetPlayerId( )
+{
+
+}
+
+CCallableCreatePlayerId :: ~CCallableCreatePlayerId( )
+{
+
+}
+
+CCallableGetGameId :: ~CCallableGetGameId( )
+{
+
+}
+
+CCallableGetBotConfigs :: ~CCallableGetBotConfigs( )
+{
+
+}
+
+CCallableGetBotConfigTexts :: ~CCallableGetBotConfigTexts( )
+{
+
+}
+
+CCallableGetLanguages :: ~CCallableGetLanguages( )
+{
+
+}
+
+CCallableGetMapConfig :: ~CCallableGetMapConfig( )
+{
+
+}
+
+CCallableGameUpdate :: ~CCallableGameUpdate( )
+{
+
+}
+
+CCallableGetAliases :: ~CCallableGetAliases( )
+{
+
+}
+
 //
 // CDBBan
 //
@@ -461,9 +598,10 @@ CDBGame :: ~CDBGame( )
 // CDBGamePlayer
 //
 
-CDBGamePlayer :: CDBGamePlayer( uint32_t nID, uint32_t nGameID, string nName, string nIP, uint32_t nSpoofed, string nSpoofedRealm, uint32_t nReserved, uint32_t nLoadingTime, uint32_t nLeft, string nLeftReason, uint32_t nTeam, uint32_t nColour )
+CDBGamePlayer :: CDBGamePlayer( uint32_t nID, uint32_t nPlayerId, uint32_t nGameID, string nName, string nIP, uint32_t nSpoofed, string nSpoofedRealm, uint32_t nReserved, uint32_t nLoadingTime, uint32_t nLeft, string nLeftReason, uint32_t nTeam, uint32_t nColour )
 {
 	m_ID = nID;
+    m_PlayerId = nPlayerId;
 	m_GameID = nGameID;
 	m_Name = nName;
 	m_IP = nIP;

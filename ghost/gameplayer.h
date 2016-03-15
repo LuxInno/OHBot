@@ -126,6 +126,8 @@ private:
 	queue<BYTEARRAY> m_GProxyBuffer;
 	uint32_t m_GProxyReconnectKey;
 	uint32_t m_LastGProxyAckTime;
+    uint32_t m_PlayerId;
+    uint32_t m_LeftTime;
 
 public:
 	CGamePlayer( CGameProtocol *nProtocol, CBaseGame *nGame, CTCPSocket *nSocket, unsigned char nPID, string nJoinedRealm, string nName, BYTEARRAY nInternalIP, bool nReserved );
@@ -173,6 +175,8 @@ public:
 	bool GetGProxy( )							{ return m_GProxy; }
 	bool GetGProxyDisconnectNoticeSent( )		{ return m_GProxyDisconnectNoticeSent; }
 	uint32_t GetGProxyReconnectKey( )			{ return m_GProxyReconnectKey; }
+    uint32_t GetPlayerId( )                     { return m_PlayerId; }
+    uint32_t GetLeftTime( )                     { return m_LeftTime; }
 
 	void SetLeftReason( string nLeftReason )										{ m_LeftReason = nLeftReason; }
 	void SetSpoofedRealm( string nSpoofedRealm )									{ m_SpoofedRealm = nSpoofedRealm; }
@@ -201,6 +205,8 @@ public:
 	void SetMuted( bool nMuted )													{ m_Muted = nMuted; }
 	void SetLeftMessageSent( bool nLeftMessageSent )								{ m_LeftMessageSent = nLeftMessageSent; }
 	void SetGProxyDisconnectNoticeSent( bool nGProxyDisconnectNoticeSent )			{ m_GProxyDisconnectNoticeSent = nGProxyDisconnectNoticeSent; }
+    void SetPlayerId( uint32_t nPLayerId )                                          { m_PlayerId = nPLayerId; }
+    void SetLeftTime( uint32_t nLeftTime )                                          { m_LeftTime = nLeftTime; }
 
 	string GetNameTerminated( );
 	uint32_t GetPing( bool LCPing );

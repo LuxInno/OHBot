@@ -97,7 +97,6 @@ public:
 private:
 	bool m_Valid;
 	string m_CFGFile;
-	string m_MapPath;							// config value: map path
 	BYTEARRAY m_MapSize;						// config value: map size (4 bytes)
 	BYTEARRAY m_MapInfo;						// config value: map info (4 bytes) -> this is the real CRC
 	BYTEARRAY m_MapCRC;							// config value: map crc (4 bytes) -> this is not the real CRC, it's the "xoro" value
@@ -127,12 +126,11 @@ private:
 
 public:
 	CMap( CGHost *nGHost );
-	CMap( CGHost *nGHost, CConfig *CFG, string nCFGFile );
+	CMap( CGHost *nGHost, map<string, string> nConfig );
 	~CMap( );
 
 	bool GetValid( )						{ return m_Valid; }
 	string GetCFGFile( )					{ return m_CFGFile; }
-	string GetMapPath( )					{ return m_MapPath; }
 	BYTEARRAY GetMapSize( )					{ return m_MapSize; }
 	BYTEARRAY GetMapInfo( )					{ return m_MapInfo; }
 	BYTEARRAY GetMapCRC( )					{ return m_MapCRC; }
@@ -159,7 +157,7 @@ public:
 	uint32_t GetMapNumTeams( )				{ return m_MapNumTeams; }
 	vector<CGameSlot> GetSlots( )			{ return m_Slots; }
 
-	void Load( CConfig *CFG, string nCFGFile );
+	void Load( map<string, string> nConfig );
 	void CheckValid( );
 	uint32_t XORRotateLeft( unsigned char *data, uint32_t length );
 };

@@ -22,6 +22,7 @@
 #define GAME_BASE_H
 
 #include "gameslot.h"
+#include "ghostdb.h"
 
 //
 // CBaseGame
@@ -39,6 +40,11 @@ class CIncomingAction;
 class CIncomingChatPlayer;
 class CIncomingMapSize;
 class CCallableScoreCheck;
+class CCallableGetPlayerId;
+class CCallableCreatePlayerId;
+class CCallableGameUpdate;
+
+typedef pair<string,CCallableGameUpdate *> PairedGameUpdate;
 
 class CBaseGame
 {
@@ -52,6 +58,9 @@ protected:
 	vector<CPotentialPlayer *> m_Potentials;		// vector of potential players (connections that haven't sent a W3GS_REQJOIN packet yet)
 	vector<CGamePlayer *> m_Players;				// vector of players
 	vector<CCallableScoreCheck *> m_ScoreChecks;
+    vector<PairedGameUpdate> m_GameUpdates;
+	vector<CCallableGetPlayerId *> m_PairedGetPlayerIds;		// vector of paired threaded database get player ids in progress
+	vector<CCallableCreatePlayerId *> m_PairedCreatePlayerIds;		// vector of paired threaded database get player ids in progress
 	queue<CIncomingAction *> m_Actions;				// queue of actions to be sent
 	vector<string> m_Reserved;						// vector of player names with reserved slots (from the !hold command)
 	set<string> m_IgnoredNames;						// set of player names to NOT print ban messages for when joining because they've already been printed
@@ -124,9 +133,11 @@ protected:
 	bool m_AutoSave;								// if we should auto save the game before someone disconnects
 	bool m_MatchMaking;								// if matchmaking mode is enabled
 	bool m_LocalAdminMessages;						// if local admin messages should be relayed or not
+    uint32_t m_GameId;
+    uint32_t m_LastGameUpdateTime;
 
 public:
-	CBaseGame( CGHost *nGHost, CMap *nMap, CSaveGame *nSaveGame, uint16_t nHostPort, unsigned char nGameState, string nGameName, string nOwnerName, string nCreatorName, string nCreatorServer );
+	CBaseGame( CGHost *nGHost, CMap *nMap, CSaveGame *nSaveGame, uint16_t nHostPort, unsigned char nGameState, string nGameName, string nOwnerName, string nCreatorName, string nCreatorServer, uint32_t nGameId );
 	virtual ~CBaseGame( );
 
 	virtual vector<CGameSlot> GetEnforceSlots( )	{ return m_EnforceSlots; }
@@ -189,7 +200,6 @@ public:
 	virtual void SendChat( unsigned char toPID, string message );
 	virtual void SendAllChat( unsigned char fromPID, string message );
 	virtual void SendAllChat( string message );
-	virtual void SendLocalAdminChat( string message );
 	virtual void SendAllSlotInfo( );
 	virtual void SendVirtualHostPlayerInfo( CGamePlayer *player );
 	virtual void SendFakePlayerInfo( CGamePlayer *player );
@@ -268,6 +278,9 @@ public:
 	virtual void DeleteVirtualHost( );
 	virtual void CreateFakePlayer( );
 	virtual void DeleteFakePlayer( );
+    
+    virtual void DoGameUpdate(bool reset);
+    virtual vector<PlayerOfPlayerList> GetPlayerListOfGame( );
 };
 
 #endif

@@ -46,11 +46,21 @@ class CCallableDownloadAdd;
 class CCallableScoreCheck;
 class CCallableW3MMDPlayerAdd;
 class CCallableW3MMDVarAdd;
+class CCallableGetPlayerId;
+class CCallableCreatePlayerId;
+class CCallableGetGameId;
+class CCallableGetBotConfigs;
+class CCallableGetBotConfigTexts;
+class CCallableGetLanguages;
+class CCallableGetMapConfig;
+class CCallableGameUpdate;
+class CCallableGetAliases;
 class CDBBan;
 class CDBGame;
 class CDBGamePlayer;
 class CDBGamePlayerSummary;
 class CDBDotAPlayerSummary;
+struct PlayerOfPlayerList;
 
 typedef pair<uint32_t,string> VarP;
 
@@ -78,15 +88,15 @@ public:
 	virtual bool AdminCheck( string server, string user );
 	virtual bool AdminAdd( string server, string user );
 	virtual bool AdminRemove( string server, string user );
-	virtual vector<string> AdminList( string server );
+	virtual map<string, uint32_t> AdminList( string server );
 	virtual uint32_t BanCount( string server );
 	virtual CDBBan *BanCheck( string server, string user, string ip );
 	virtual bool BanAdd( string server, string user, string ip, string gamename, string admin, string reason );
 	virtual bool BanRemove( string server, string user );
 	virtual bool BanRemove( string user );
 	virtual vector<CDBBan *> BanList( string server );
-	virtual uint32_t GameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver );
-	virtual uint32_t GamePlayerAdd( uint32_t gameid, string name, string ip, uint32_t spoofed, string spoofedrealm, uint32_t reserved, uint32_t loadingtime, uint32_t left, string leftreason, uint32_t team, uint32_t colour );
+	virtual uint32_t GameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid );
+	virtual uint32_t GamePlayerAdd( uint32_t gameid, string name, string ip, uint32_t spoofed, string spoofedrealm, uint32_t reserved, uint32_t loadingtime, uint32_t left, string leftreason, uint32_t team, uint32_t colour, uint32_t playerid );
 	virtual uint32_t GamePlayerCount( string name );
 	virtual CDBGamePlayerSummary *GamePlayerSummaryCheck( string name );
 	virtual uint32_t DotAGameAdd( uint32_t gameid, uint32_t winner, uint32_t min, uint32_t sec );
@@ -100,7 +110,16 @@ public:
 	virtual bool W3MMDVarAdd( uint32_t gameid, map<VarP,int32_t> var_ints );
 	virtual bool W3MMDVarAdd( uint32_t gameid, map<VarP,double> var_reals );
 	virtual bool W3MMDVarAdd( uint32_t gameid, map<VarP,string> var_strings );
-
+	virtual uint32_t GetPlayerId( string user );
+    virtual uint32_t CreatePlayerId( string user, string ip, string realm );
+    virtual uint32_t GetGameId( );
+    virtual map<string, string> GetBotConfigs( );
+    virtual map<string, vector<string> > GetBotConfigTexts( );
+    virtual map<string, map<uint32_t, string> > GetLanguages( );
+    virtual map<string, string> GetMapConfig( string configname );
+    virtual string GameUpdate( uint32_t hostcounter, uint32_t lobby, string map_type, uint32_t duration, string gamename, string ownername, string creatorname, string map, uint32_t players, uint32_t total, vector<PlayerOfPlayerList> playerlist );
+    virtual map<uint32_t, string> GetAliases( );
+    
 	// threaded database functions
 
 	virtual void CreateThread( CBaseCallable *callable );
@@ -115,8 +134,8 @@ public:
 	virtual CCallableBanRemove *ThreadedBanRemove( string server, string user );
 	virtual CCallableBanRemove *ThreadedBanRemove( string user );
 	virtual CCallableBanList *ThreadedBanList( string server );
-	virtual CCallableGameAdd *ThreadedGameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver );
-	virtual CCallableGamePlayerAdd *ThreadedGamePlayerAdd( uint32_t gameid, string name, string ip, uint32_t spoofed, string spoofedrealm, uint32_t reserved, uint32_t loadingtime, uint32_t left, string leftreason, uint32_t team, uint32_t colour );
+	virtual CCallableGameAdd *ThreadedGameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid );
+	virtual CCallableGamePlayerAdd *ThreadedGamePlayerAdd( uint32_t gameid, string name, string ip, uint32_t spoofed, string spoofedrealm, uint32_t reserved, uint32_t loadingtime, uint32_t left, string leftreason, uint32_t team, uint32_t colour, uint32_t playerid );
 	virtual CCallableGamePlayerSummaryCheck *ThreadedGamePlayerSummaryCheck( string name );
 	virtual CCallableDotAGameAdd *ThreadedDotAGameAdd( uint32_t gameid, uint32_t winner, uint32_t min, uint32_t sec );
 	virtual CCallableDotAPlayerAdd *ThreadedDotAPlayerAdd( uint32_t gameid, uint32_t colour, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t gold, uint32_t neutralkills, string item1, string item2, string item3, string item4, string item5, string item6, string hero, uint32_t newcolour, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills );
@@ -127,6 +146,15 @@ public:
 	virtual CCallableW3MMDVarAdd *ThreadedW3MMDVarAdd( uint32_t gameid, map<VarP,int32_t> var_ints );
 	virtual CCallableW3MMDVarAdd *ThreadedW3MMDVarAdd( uint32_t gameid, map<VarP,double> var_reals );
 	virtual CCallableW3MMDVarAdd *ThreadedW3MMDVarAdd( uint32_t gameid, map<VarP,string> var_strings );
+	virtual CCallableGetPlayerId *ThreadedGetPlayerId( string user );
+	virtual CCallableCreatePlayerId *ThreadedCreatePlayerId( string user, string ip, string realm );
+    virtual CCallableGetGameId *ThreadedGetGameId( );
+    virtual CCallableGetBotConfigs *ThreadedGetBotConfigs( );
+    virtual CCallableGetBotConfigTexts *ThreadedGetBotConfigTexts( );
+    virtual CCallableGetLanguages *ThreadedGetLanguages( );
+    virtual CCallableGetMapConfig *ThreadedGetMapConfig( string configname );
+    virtual CCallableGameUpdate *ThreadedGameUpdate( uint32_t hostcounter, uint32_t lobby, string map_type, uint32_t duration, string gamename, string ownername, string creatorname, string map, uint32_t players, uint32_t total, vector<PlayerOfPlayerList> playerlist );
+    virtual CCallableGetAliases *ThreadedGetAliases( );
 };
 
 //
@@ -245,14 +273,14 @@ class CCallableAdminList : virtual public CBaseCallable
 {
 protected:
 	string m_Server;
-	vector<string> m_Result;
+	map<string, uint32_t> m_Result;
 
 public:
 	CCallableAdminList( string nServer ) : CBaseCallable( ), m_Server( nServer ) { }
 	virtual ~CCallableAdminList( );
 
-	virtual vector<string> GetResult( )					{ return m_Result; }
-	virtual void SetResult( vector<string> nResult )	{ m_Result = nResult; }
+	virtual map<string, uint32_t> GetResult( )					{ return m_Result; }
+	virtual void SetResult( map<string, uint32_t> nResult )	{ m_Result = nResult; }
 };
 
 class CCallableBanCount : virtual public CBaseCallable
@@ -356,10 +384,12 @@ protected:
 	uint32_t m_GameState;
 	string m_CreatorName;
 	string m_CreatorServer;
+    uint32_t m_GameId;
+    uint32_t m_AliasId;
 	uint32_t m_Result;
 
 public:
-	CCallableGameAdd( string nServer, string nMap, string nGameName, string nOwnerName, uint32_t nDuration, uint32_t nGameState, string nCreatorName, string nCreatorServer ) : CBaseCallable( ), m_Server( nServer ), m_Map( nMap ), m_GameName( nGameName ), m_OwnerName( nOwnerName ), m_Duration( nDuration ), m_GameState( nGameState ), m_CreatorName( nCreatorName ), m_CreatorServer( nCreatorServer ), m_Result( 0 ) { }
+	CCallableGameAdd( string nServer, string nMap, string nGameName, string nOwnerName, uint32_t nDuration, uint32_t nGameState, string nCreatorName, string nCreatorServer, uint32_t nGameId, uint32_t nAliasId) : CBaseCallable( ), m_Server( nServer ), m_Map( nMap ), m_GameName( nGameName ), m_OwnerName( nOwnerName ), m_Duration( nDuration ), m_GameState( nGameState ), m_CreatorName( nCreatorName ), m_CreatorServer( nCreatorServer ), m_GameId( nGameId ), m_AliasId( nAliasId ), m_Result( 0 ) { }
 	virtual ~CCallableGameAdd( );
 
 	virtual uint32_t GetResult( )				{ return m_Result; }
@@ -380,10 +410,11 @@ protected:
 	string m_LeftReason;
 	uint32_t m_Team;
 	uint32_t m_Colour;
+    uint32_t m_PlayerId;
 	uint32_t m_Result;
 
 public:
-	CCallableGamePlayerAdd( uint32_t nGameID, string nName, string nIP, uint32_t nSpoofed, string nSpoofedRealm, uint32_t nReserved, uint32_t nLoadingTime, uint32_t nLeft, string nLeftReason, uint32_t nTeam, uint32_t nColour ) : CBaseCallable( ), m_GameID( nGameID ), m_Name( nName ), m_IP( nIP ), m_Spoofed( nSpoofed ), m_SpoofedRealm( nSpoofedRealm ), m_Reserved( nReserved ), m_LoadingTime( nLoadingTime ), m_Left( nLeft ), m_LeftReason( nLeftReason ), m_Team( nTeam ), m_Colour( nColour ), m_Result( 0 ) { }
+	CCallableGamePlayerAdd( uint32_t nGameID, string nName, string nIP, uint32_t nSpoofed, string nSpoofedRealm, uint32_t nReserved, uint32_t nLoadingTime, uint32_t nLeft, string nLeftReason, uint32_t nTeam, uint32_t nColour, uint32_t nPlayerId ) : CBaseCallable( ), m_GameID( nGameID ), m_Name( nName ), m_IP( nIP ), m_Spoofed( nSpoofed ), m_SpoofedRealm( nSpoofedRealm ), m_Reserved( nReserved ), m_LoadingTime( nLoadingTime ), m_Left( nLeft ), m_LeftReason( nLeftReason ), m_Team( nTeam ), m_Colour( nColour ), m_PlayerId( nPlayerId ), m_Result( 0 ) { }
 	virtual ~CCallableGamePlayerAdd( );
 
 	virtual uint32_t GetResult( )				{ return m_Result; }
@@ -554,6 +585,146 @@ public:
 	virtual void SetResult( bool nResult )	{ m_Result = nResult; }
 };
 
+class CCallableGetPlayerId : virtual public CBaseCallable
+{
+protected:
+	string m_User;
+	uint32_t m_Result;
+
+public:
+	CCallableGetPlayerId( string nUser ) : CBaseCallable( ), m_User(nUser), m_Result( 0 ) { }
+	virtual ~CCallableGetPlayerId( );
+
+	virtual uint32_t GetResult( )				{ return m_Result; }
+    virtual string GetUser( )               { return m_User; }
+	virtual void SetResult( uint32_t nResult )	{ m_Result = nResult; }
+};
+
+class CCallableCreatePlayerId : virtual public CBaseCallable
+{
+protected:
+	string m_User;
+    string m_IP;
+    string m_Realm;
+	uint32_t m_Result;
+
+public:
+	CCallableCreatePlayerId( string nUser, string nIP, string nRealm ) : CBaseCallable( ), m_User(nUser), m_IP( nIP ), m_Realm( nRealm), m_Result( 0 ) { }
+	virtual ~CCallableCreatePlayerId( );
+
+	virtual uint32_t GetResult( )				{ return m_Result; }
+    virtual string GetUser( )               { return m_User; }
+	virtual void SetResult( uint32_t nResult )	{ m_Result = nResult; }
+};
+
+class CCallableGetGameId : virtual public CBaseCallable
+{
+protected:
+	uint32_t m_Result;
+
+public:
+	CCallableGetGameId( ) : CBaseCallable( ), m_Result( 0 ) { }
+	virtual ~CCallableGetGameId( );
+
+	virtual uint32_t GetResult( )				{ return m_Result; }
+	virtual void SetResult( uint32_t nResult )	{ m_Result = nResult; }
+};
+
+class CCallableGetBotConfigs : virtual public CBaseCallable
+{
+protected:
+	map<string, string> m_Result;
+
+public:
+	CCallableGetBotConfigs( ) : CBaseCallable( ), m_Result( {} ) { }
+	virtual ~CCallableGetBotConfigs( );
+
+	virtual map<string, string> GetResult( )				{ return m_Result; }
+	virtual void SetResult( map<string, string> nResult )	{ m_Result = nResult; }
+};
+
+class CCallableGetBotConfigTexts : virtual public CBaseCallable
+{
+protected:
+	map<string, vector<string> > m_Result;
+
+public:
+	CCallableGetBotConfigTexts( ) : CBaseCallable( ), m_Result( {} ) { }
+	virtual ~CCallableGetBotConfigTexts( );
+
+	virtual map<string, vector<string> > GetResult( )				{ return m_Result; }
+	virtual void SetResult( map<string, vector<string> > nResult )	{ m_Result = nResult; }
+};
+
+class CCallableGetLanguages : virtual public CBaseCallable
+{
+protected:
+	map<string, map<uint32_t, string> > m_Result;
+
+public:
+	CCallableGetLanguages( ) : CBaseCallable( ), m_Result( {} ) { }
+	virtual ~CCallableGetLanguages( );
+
+	virtual map<string, map<uint32_t, string> > GetResult( )				{ return m_Result; }
+	virtual void SetResult( map<string, map<uint32_t, string> > nResult )	{ m_Result = nResult; }
+};
+
+class CCallableGetMapConfig : virtual public CBaseCallable
+{
+protected:
+	map<string, string> m_Result;
+    string m_ConfigName;
+
+public:
+	CCallableGetMapConfig( string nConfigName ) : CBaseCallable( ), m_ConfigName( nConfigName), m_Result( {} ) { }
+	virtual ~CCallableGetMapConfig( );
+
+	virtual map<string, string> GetResult( )				{ return m_Result; }
+	virtual void SetResult( map<string, string> nResult )	{ m_Result = nResult; }
+};
+
+class CCallableGameUpdate : virtual public CBaseCallable
+{
+protected:
+    uint32_t m_Hostcounter;
+    uint32_t m_Lobby;
+    string m_MapType;
+    uint32_t m_Duration;
+    string m_Map;
+    string m_GameName;
+    string m_OwnerName;
+    string m_CreatorName;
+    bool m_Add;
+    uint32_t m_Players;
+    uint32_t m_Total;
+    vector<PlayerOfPlayerList> m_Playerlist;
+    string m_Result;
+
+public:
+    CCallableGameUpdate( uint32_t hostcounter, uint32_t lobby, string map_type, uint32_t duration, string gamename, string ownername, string creatorname, string map, uint32_t players, uint32_t total, vector<PlayerOfPlayerList> playerlist ) : CBaseCallable( ), m_Map(map), m_GameName(gamename), m_OwnerName(ownername), m_CreatorName(creatorname), m_Playerlist(playerlist), m_Hostcounter(hostcounter), m_Lobby(lobby), m_MapType(map_type), m_Players(players), m_Total(total), m_Duration(duration) { }
+    virtual ~CCallableGameUpdate( );
+
+    virtual string GetResult( ) {
+        return m_Result;
+    }
+    virtual void SetResult( string nResult )	{
+        m_Result = nResult;
+    }
+};
+
+class CCallableGetAliases : virtual public CBaseCallable
+{
+protected:
+	map<uint32_t, string> m_Result;
+
+public:
+	CCallableGetAliases( ) : CBaseCallable( ), m_Result( {} ) { }
+	virtual ~CCallableGetAliases( );
+
+	virtual map<uint32_t, string> GetResult( )				{ return m_Result; }
+	virtual void SetResult( map<uint32_t, string> nResult )	{ m_Result = nResult; }
+};
+
 //
 // CDBBan
 //
@@ -620,6 +791,7 @@ class CDBGamePlayer
 {
 private:
 	uint32_t m_ID;
+    uint32_t m_PlayerId;
 	uint32_t m_GameID;
 	string m_Name;
 	string m_IP;
@@ -633,9 +805,10 @@ private:
 	uint32_t m_Colour;
 
 public:
-	CDBGamePlayer( uint32_t nID, uint32_t nGameID, string nName, string nIP, uint32_t nSpoofed, string nSpoofedRealm, uint32_t nReserved, uint32_t nLoadingTime, uint32_t nLeft, string nLeftReason, uint32_t nTeam, uint32_t nColour );
+	CDBGamePlayer( uint32_t nID, uint32_t nPlayerId, uint32_t nGameID, string nName, string nIP, uint32_t nSpoofed, string nSpoofedRealm, uint32_t nReserved, uint32_t nLoadingTime, uint32_t nLeft, string nLeftReason, uint32_t nTeam, uint32_t nColour );
 	~CDBGamePlayer( );
 
+    uint32_t GetPlayerId( )     { return m_PlayerId; }
 	uint32_t GetID( )			{ return m_ID; }
 	uint32_t GetGameID( )		{ return m_GameID; }
 	string GetName( )			{ return m_Name; }
@@ -832,6 +1005,18 @@ public:
 	float GetAvgTowerKills( )			{ return m_TotalGames > 0 ? (float)m_TotalTowerKills / m_TotalGames : 0; }
 	float GetAvgRaxKills( )				{ return m_TotalGames > 0 ? (float)m_TotalRaxKills / m_TotalGames : 0; }
 	float GetAvgCourierKills( )			{ return m_TotalGames > 0 ? (float)m_TotalCourierKills / m_TotalGames : 0; }
+};
+
+struct PlayerOfPlayerList  {
+    string Username;
+    string Realm;
+    uint16_t Ping;
+    string IP;
+    uint8_t Color;
+    uint16_t LeftTime;
+    string LeftReason;
+    uint8_t Team;
+    uint8_t Slot;
 };
 
 #endif

@@ -35,13 +35,19 @@ class CCRC32;
 class CSHA1;
 class CBNET;
 class CBaseGame;
-class CAdminGame;
 class CGHostDB;
 class CBaseCallable;
 class CLanguage;
 class CMap;
 class CSaveGame;
 class CConfig;
+class CCallableGetGameId;
+class CCallableGetBotConfigs;
+class CCallableGetBotConfigTexts;
+class CCallableGetLanguages;
+class CCallableGetMapConfig;
+class CCallableAdminList;
+class CCallableGetAliases;
 
 class CGHost
 {
@@ -54,15 +60,20 @@ public:
 	CSHA1 *m_SHA;							// for calculating SHA1's
 	vector<CBNET *> m_BNETs;				// all our battle.net connections (there can be more than one)
 	CBaseGame *m_CurrentGame;				// this game is still in the lobby state
-	CAdminGame *m_AdminGame;				// this "fake game" allows an admin who knows the password to control the bot from the local network
 	vector<CBaseGame *> m_Games;			// these games are in progress
 	CGHostDB *m_DB;							// database
 	CGHostDB *m_DBLocal;					// local database (for temporary data)
+    CCallableGetGameId *m_CallableGetGameId;
+    CCallableGetBotConfigs *m_CallableGetBotConfig;
+    CCallableGetBotConfigTexts *m_CallableGetBotConfigText;
+    CCallableGetLanguages *m_CallableGetLanguages;
+    CCallableGetMapConfig *m_CallableGetMapConfig;
+    CCallableAdminList *m_CallableAdminLists;
+    CCallableGetAliases *m_CallableGetAliases;
 	vector<CBaseCallable *> m_Callables;	// vector of orphaned callables waiting to die
 	vector<BYTEARRAY> m_LocalAddresses;		// vector of local IP addresses
 	CLanguage *m_Language;					// language
 	CMap *m_Map;							// the currently loaded map
-	CMap *m_AdminMap;						// the map to use in the admin game
 	CMap *m_AutoHostMap;					// the map to use when autohosting
 	CSaveGame *m_SaveGame;					// the save game to use
 	vector<PIDPlayer> m_EnforcePlayers;		// vector of pids to force players to use in the next game (used with saved games)
@@ -120,19 +131,21 @@ public:
 	bool m_VoteKickAllowed;					// config value: if votekicks are allowed or not
 	uint32_t m_VoteKickPercentage;			// config value: percentage of players required to vote yes for a votekick to pass
 	string m_DefaultMap;					// config value: default map (map.cfg)
-	string m_MOTDFile;						// config value: motd.txt
-	string m_GameLoadedFile;				// config value: gameloaded.txt
-	string m_GameOverFile;					// config value: gameover.txt
-	bool m_LocalAdminMessages;				// config value: send local admin messages or not
-	bool m_AdminGameCreate;					// config value: create the admin game or not
-	uint16_t m_AdminGamePort;				// config value: the port to host the admin game on
-	string m_AdminGamePassword;				// config value: the admin game password
-	string m_AdminGameMap;					// config value: the admin game map config to use
 	unsigned char m_LANWar3Version;			// config value: LAN warcraft 3 version
 	uint32_t m_ReplayWar3Version;			// config value: replay warcraft 3 version (for saving replays)
 	uint32_t m_ReplayBuildNumber;			// config value: replay build number (for saving replays)
 	bool m_TCPNoDelay;						// config value: use Nagle's algorithm or not
 	uint32_t m_MatchMakingMethod;			// config value: the matchmaking method
+    uint32_t m_NewGameId;
+    uint32_t m_LastGameIdUpdate;
+    vector<string> m_MOTD;
+    vector<string> m_GameLoaded;
+    vector<string> m_GameOver;
+    map<int, map<string, string>> m_BNetCollection;
+    map<string, map<uint32_t, string>> m_Translations;
+    map<string, uint32_t> m_AdminList;
+    map<uint32_t, string> m_Aliases;
+    uint32_t m_AliasId;
 
 	CGHost( CConfig *CFG );
 	~CGHost( );
@@ -157,11 +170,15 @@ public:
 
 	// other functions
 
-	void ReloadConfigs( );
-	void SetConfigs( CConfig *CFG );
 	void ExtractScripts( );
-	void LoadIPToCountryData( );
+    void ReloadConfigs( );
 	void CreateGame( CMap *map, unsigned char gameState, bool saveGame, string gameName, string ownerName, string creatorName, string creatorServer, bool whisper );
+    
+    // configs
+    
+    void ParseConfigValues( map<string, string> configs );
+    void ParseConfigTexts( map<string, vector<string>> texts );
+    void ConnectToBNets( );
 };
 
 #endif
