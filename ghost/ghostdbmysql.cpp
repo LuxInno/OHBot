@@ -933,7 +933,6 @@ vector<CDBBan *> MySQLBanList( void *conn, string *error, uint32_t botid, string
 
 uint32_t MySQLGameAdd( void *conn, string *error, uint32_t botid, string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid, vector<string> lobbylog, vector<string> gamelog, string elochange )
 {
-	uint32_t RowID = 0;
 	string EscServer = MySQLEscapeString( conn, server );
 	string EscMap = MySQLEscapeString( conn, map );
 	string EscGameName = MySQLEscapeString( conn, gamename );
@@ -941,12 +940,12 @@ uint32_t MySQLGameAdd( void *conn, string *error, uint32_t botid, string server,
 	string EscCreatorName = MySQLEscapeString( conn, creatorname );
 	string EscCreatorServer = MySQLEscapeString( conn, creatorserver );
 	string EscEloChange = MySQLEscapeString( conn, elochange );
-	string Query = "UPDATE oh_games SET server='" + EscServer + "', map='" + EscMap + "', datetime=NOW(), gamename='" + EscGameName + "', ownername='" + EscOwnerName + "', duration='" + UTIL_ToString( duration ) + "', gamestate='" + UTIL_ToString( gamestate ) + "', creatorname='" + EscCreatorName + "', creatorserver='" + EscCreatorName + "', alias_id='" + UTIL_ToString(aliasid) + "', elochange = '" + EscEloChange + "' WHERE id='" + UTIL_ToString(gameid) + "';";
+	string Query = "UPDATE oh_games SET  `gamestatus` = '1', server='" + EscServer + "', map='" + EscMap + "', datetime=NOW(), gamename='" + EscGameName + "', ownername='" + EscOwnerName + "', duration='" + UTIL_ToString( duration ) + "', gamestate='" + UTIL_ToString( gamestate ) + "', creatorname='" + EscCreatorName + "', creatorserver='" + EscCreatorName + "', alias_id='" + UTIL_ToString(aliasid) + "', elochange = '" + EscEloChange + "' WHERE id='" + UTIL_ToString(gameid) + "';";
 
 	if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
 		*error = mysql_error( (MYSQL *)conn );
 
-	return RowID;
+	return gameid;
 }
 
 uint32_t MySQLGamePlayerAdd( void *conn, string *error, uint32_t botid, uint32_t gameid, string name, string ip, uint32_t spoofed, string spoofedrealm, uint32_t reserved, uint32_t loadingtime, uint32_t left, string leftreason, uint32_t team, uint32_t colour, uint32_t playerid )
@@ -1336,12 +1335,14 @@ uint32_t MySQLCreatePlayerId( void *conn, string *error, uint32_t botid, string 
     string EscRealm = MySQLEscapeString( conn, realm );
     
     uint32_t RowID = 0;
-    string Query = "INSERT INTO oh_stats_players (player, player_lower, ip, realm, player_language) VALUES ('"+EscName+"','"+EscLowerName+"','"+EscIP+"','"+EscRealm+"');";
+    string Query = "INSERT INTO oh_stats_players (player, player_lower, ip, realm, player_language) VALUES ('"+EscName+"','"+EscLowerName+"','"+EscIP+"','"+EscRealm+"', 'en');";
 
     if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
         *error = mysql_error( (MYSQL *)conn );
     else
         RowID = mysql_insert_id( (MYSQL *)conn );
+    
+    CONSOLE_Print(Query + " WITH ID " + UTIL_ToString(RowID));
 
     return RowID;
 }

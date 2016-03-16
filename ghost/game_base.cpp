@@ -235,7 +235,7 @@ CBaseGame :: ~CBaseGame( )
 			SecString.insert( 0, "0" );
 
 		m_Replay->BuildReplay( m_GameName, m_StatString, m_GHost->m_ReplayWar3Version, m_GHost->m_ReplayBuildNumber );
-		m_Replay->Save( m_GHost->m_TFT, m_GHost->m_ReplayPath + UTIL_FileSafeName( "GHost++ " + string( Time ) + " " + m_GameName + " (" + MinString + "m" + SecString + "s).w3g" ) );
+		m_Replay->Save( m_GHost->m_TFT, m_GHost->m_ReplayPath + UTIL_FileSafeName( "GHost++ " + m_GameId + ".w3g" ) );
 	}
 
 	delete m_Socket;
@@ -4690,6 +4690,10 @@ bool CBaseGame :: IsPremium( string username )
 }
 void CBaseGame :: ShowTeamScores( CGamePlayer *player )
 {
+        if(! player) {
+            m_EloChange = "";
+        }
+        
 	vector<double> Team1;
 	double Team1Total = 0;
 	vector<double> Team2;
@@ -4783,10 +4787,18 @@ void CBaseGame :: ShowTeamScores( CGamePlayer *player )
 
 			elo_recalculate_ratings(eloNumPlayers, eloPlayerRatings, eloPlayerTeams, eloNumTeams, eloTeamRatings, eloTeamWinners);
 
-			if( k == 0 )
-				eloChangeString += UTIL_ToString( eloPlayerRatings[0] - Team1[0], 2 ) + " / ";
-			else
-				eloChangeString += UTIL_ToString( eloPlayerRatings[Team1.size( )] - Team2[0], 2 );
+			if( k == 0 ) {
+                            eloChangeString += UTIL_ToString( eloPlayerRatings[0] - Team1[0], 2 ) + " / ";
+                            if(! player) {
+                                m_EloChange += UTIL_ToString( eloPlayerRatings[0] - Team1[0], 2 ) + " / ";
+                            }
+                        }
+			else {
+                            eloChangeString += UTIL_ToString( eloPlayerRatings[Team1.size( )] - Team2[0], 2 );
+                            if(! player) {
+                                m_EloChange += UTIL_ToString( eloPlayerRatings[Team1.size( )] - Team2[0], 2 );
+                            }
+                        }
 		}
 
 		delete eloPlayerRatings;
