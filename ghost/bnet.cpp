@@ -296,7 +296,6 @@ bool CBNET :: Update( void *fd, void *send_fd )
 	if( m_Socket->GetConnected( ) )
 	{
 		// the socket is connected and everything appears to be working properly
-
 		m_Socket->DoRecv( (fd_set *)fd );
 		ExtractPackets( );
 		ProcessPackets( );
@@ -788,6 +787,114 @@ void CBNET :: ProcessChatEvent( CIncomingChatEvent *chatEvent )
 					m_GHost->m_CurrentGame->AddToSpoofed( m_Server, User, false );
 			}
 		}
+// handle bot commands
+
+		if( Message == "?trigger" && ( IsAdmin( User ) || IsRootAdmin( User ) || ( m_PublicCommands && m_OutPackets.size( ) <= 3 ) ) )
+			QueueChatCommand( m_GHost->m_Language->CommandTrigger( string( 1, m_CommandTrigger ) ), User, Whisper );
+		else if( !Message.empty( ) && Message[0] == m_CommandTrigger )
+		{
+			// extract the command trigger, the command, and the payload
+			// e.g. "!say hello world" -> command: "say", payload: "hello world"
+
+			string Command;
+			string Payload;
+			string :: size_type PayloadStart = Message.find( " " );
+
+			if( PayloadStart != string :: npos )
+			{
+				Command = Message.substr( 1, PayloadStart - 1 );
+				Payload = Message.substr( PayloadStart + 1 );
+			}
+			else
+				Command = Message.substr( 1 );
+
+			transform( Command.begin( ), Command.end( ), Command.begin( ), (int(*)(int))tolower );
+
+			if( IsAdmin( User ) || IsRootAdmin( User ) )
+			{
+				CONSOLE_Print( "[BNET: " + m_ServerAlias + "] admin [" + User + "] sent command [" + Message + "]" );
+
+				if( Command == "priv" && !Payload.empty( ) )
+					m_GHost->CreateGame( m_GHost->m_Map, GAME_PRIVATE, false, Payload, User, User, m_Server, Whisper );
+
+				else if( Command == "map" )
+				{
+					if( Payload.empty( ) )
+						QueueChatCommand( m_GHost->m_Language->CurrentlyLoadedMapCFGIs( m_GHost->m_Map->GetCFGFile( ) ), User, Whisper );
+					else
+					{
+						string FoundMaps;
+
+						try
+						{
+							path MapPath( m_GHost->m_MapPath );
+							string Pattern = Payload;
+							transform( Pattern.begin( ), Pattern.end( ), Pattern.begin( ), (int(*)(int))tolower );
+
+							if( !exists( MapPath ) )
+							{
+								CONSOLE_Print( "[BNET: " + m_ServerAlias + "] error listing maps - map path doesn't exist" );
+								QueueChatCommand( m_GHost->m_Language->ErrorListingMaps( ), User, Whisper );
+							}
+							else
+							{
+								directory_iterator EndIterator;
+								path LastMatch;
+								uint32_t Matches = 0;
+
+								for( directory_iterator i( MapPath ); i != EndIterator; ++i )
+								{
+									string FileName = i->path( ).filename( ).string( );
+									string Stem = i->path( ).stem( ).string( );
+									transform( FileName.begin( ), FileName.end( ), FileName.begin( ), (int(*)(int))tolower );
+									transform( Stem.begin( ), Stem.end( ), Stem.begin( ), (int(*)(int))tolower );
+
+									if( !is_directory( i->status( ) ) && FileName.find( Pattern ) != string :: npos )
+									{
+										LastMatch = i->path( );
+										++Matches;
+
+										if( FoundMaps.empty( ) )
+											FoundMaps = i->path( ).filename( ).string( );
+										else if( Matches == 1 )
+										{
+											string File = LastMatch.filename( ).string( );
+											QueueChatCommand( m_GHost->m_Language->LoadingConfigFile( File ), User, Whisper );
+			
+											// hackhack: create a config file in memory with the required information to load the map
+		
+											map<string, string> cfg;
+											cfg["map_localpath"] = File;
+											m_GHost->m_Map->Load( cfg );
+										}
+										else
+											FoundMaps += ", " + i->path( ).filename( ).string( );
+
+										// if the pattern matches the filename exactly, with or without extension, stop any further matching
+
+										if( FileName == Pattern || Stem == Pattern )
+										{
+											Matches = 1;
+											break;
+										}
+									}
+								}
+
+								if( Matches == 0 )
+									QueueChatCommand( m_GHost->m_Language->NoMapsFound( ), User, Whisper );
+								else
+									QueueChatCommand( m_GHost->m_Language->FoundMaps( FoundMaps ), User, Whisper );
+							}
+						}
+						catch( const exception &ex )
+						{
+							CONSOLE_Print( "[BNET: " + m_ServerAlias + "] error listing maps - caught exception [" + ex.what( ) + "]" );
+							QueueChatCommand( m_GHost->m_Language->ErrorListingMaps( ), User, Whisper );
+						}
+					}
+				}
+			}
+		}
 	}
 	else if( Event == CBNETProtocol :: EID_CHANNEL )
 	{
@@ -985,11 +1092,12 @@ void CBNET :: QueueGameRefresh( unsigned char state, string gameName, string hos
 			BYTEARRAY MapHeight;
 			MapHeight.push_back( 192 );
 			MapHeight.push_back( 7 );
-
+			MapGameType = 4294901779;
+                        
 			if( m_GHost->m_Reconnect )
-				m_OutPackets.push( m_Protocol->SEND_SID_STARTADVEX3( state, UTIL_CreateByteArray( MapGameType, false ), map->GetMapGameFlags( ), MapWidth, MapHeight, gameName, hostName, upTime, m_GHost->m_MapPath + "/" + map->GetMapLocalPath( ), map->GetMapCRC( ), map->GetMapSHA1( ), FixedHostCounter ) );
+				m_OutPackets.push( m_Protocol->SEND_SID_STARTADVEX3( state, UTIL_CreateByteArray( MapGameType, false ), map->GetMapGameFlags( ), MapWidth, MapHeight, gameName, hostName, upTime, m_GHost->m_MapPath + map->GetMapLocalPath( ), map->GetMapCRC( ), map->GetMapSHA1( ), FixedHostCounter ) );
 			else
-				m_OutPackets.push( m_Protocol->SEND_SID_STARTADVEX3( state, UTIL_CreateByteArray( MapGameType, false ), map->GetMapGameFlags( ), map->GetMapWidth( ), map->GetMapHeight( ), gameName, hostName, upTime, m_GHost->m_MapPath + "/" + map->GetMapLocalPath( ), map->GetMapCRC( ), map->GetMapSHA1( ), FixedHostCounter ) );
+				m_OutPackets.push( m_Protocol->SEND_SID_STARTADVEX3( state, UTIL_CreateByteArray( MapGameType, false ), map->GetMapGameFlags( ), map->GetMapWidth( ), map->GetMapHeight( ), gameName, hostName, upTime, m_GHost->m_MapPath + map->GetMapLocalPath( ), map->GetMapCRC( ), map->GetMapSHA1( ), FixedHostCounter ) );
 		}
 	}
 }

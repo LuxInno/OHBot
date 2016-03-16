@@ -85,7 +85,9 @@ public:
     virtual CCallableGetMapConfig *ThreadedGetMapConfig( string configname );
     virtual CCallableGameUpdate *ThreadedGameUpdate( uint32_t hostcounter, uint32_t lobby, string map_type, uint32_t duration, string gamename, string ownername, string creatorname, string map, uint32_t players, uint32_t total, vector<PlayerOfPlayerList> playerlist );
     virtual CCallableGetAliases *ThreadedGetAliases( );
-   
+    virtual CCallableGetStatsTemplates *ThreadedGetStatsTemplates( );
+    virtual CCallableGetPlayerStats *ThreadedGetPlayerStats( uint32_t aliasid, uint32_t playerid );  
+ 
 	virtual void *GetIdleConnection( );
 };
 
@@ -125,6 +127,9 @@ map<string, map<uint32_t, string> > MySQLGetLanguages( void *conn, string *error
 map<string, string> MySQLGetMapConfig( void *conn, string *error, uint32_t botid, string configname);
 string MySQLGameUpdate( void *conn, string *error, uint32_t botid, uint32_t hostcounter, uint32_t lobby, string map_type, uint32_t duration, string gamename, string ownername, string creatorname, string map, uint32_t players, uint32_t total, vector<PlayerOfPlayerList> playerlist );
 map<uint32_t, string> MySQLGetAliases( void *conn, string *error, uint32_t botid );
+map<uint32_t, string> MySQLGetStatsTemplates( void *conn, string *error, uint32_t botid );
+map<string, string> MySQLGetPlayerStats( void *conn, string *error, uint32_t botid, uint32_t aliasid, uint32_t playerid );
+
 
 //
 // MySQL Callables
@@ -466,6 +471,26 @@ public:
 	virtual void operator( )( );
 	virtual void Init( ) { CMySQLCallable :: Init( ); }
 	virtual void Close( ) { CMySQLCallable :: Close( ); }
+};
+
+class CMySQLCallableGetStatsTemplates : public CCallableGetStatsTemplates, public CMySQLCallable
+{
+public:
+        CMySQLCallableGetStatsTemplates( void *nConnection, uint32_t nSQLBotID, string nSQLServer, string nSQLDatabase, string nSQLUser, string nSQLPassword, uint16_t nSQLPort ) : CBaseCallable( ), CCallableGetStatsTemplates( ), CMySQLCallable( nConnection, nSQLBotID, nSQLServer, nSQLDatabase, nSQLUser, nSQLPassword, nSQLPort ) { }
+
+        virtual void operator( )( );
+        virtual void Init( ) { CMySQLCallable :: Init( ); }
+        virtual void Close( ) { CMySQLCallable :: Close( ); }
+};
+
+class CMySQLCallableGetPlayerStats : public CCallableGetPlayerStats, public CMySQLCallable
+{
+public:
+        CMySQLCallableGetPlayerStats( uint32_t nAliasId, uint32_t nPlayerId, void *nConnection, uint32_t nSQLBotID, string nSQLServer, string nSQLDatabase, string nSQLUser, string nSQLPassword, uint16_t nSQLPort ) : CBaseCallable( ), CCallableGetPlayerStats( nAliasId, nPlayerId ), CMySQLCallable( nConnection, nSQLBotID, nSQLServer, nSQLDatabase, nSQLUser, nSQLPassword, nSQLPort ) { }
+
+        virtual void operator( )( );
+        virtual void Init( ) { CMySQLCallable :: Init( ); }
+        virtual void Close( ) { CMySQLCallable :: Close( ); }
 };
 
 #endif

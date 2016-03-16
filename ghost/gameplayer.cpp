@@ -78,12 +78,16 @@ string CPotentialPlayer :: GetExternalIPString( )
 
 bool CPotentialPlayer :: Update( void *fd )
 {
+        CONSOLE_Print("gameplayer init");
 	if( m_DeleteMe )
 		return true;
 
-	if( !m_Socket )
-		return false;
+	if( !m_Socket ) {
+            CONSOLE_Print("gameplayer no socket");
+            return false;
+        }
 
+        CONSOLE_Print("gameplayer socket");
 	m_Socket->DoRecv( (fd_set *)fd );
 	ExtractPackets( );
 	ProcessPackets( );
@@ -229,8 +233,8 @@ CGamePlayer :: CGamePlayer( CGameProtocol *nProtocol, CBaseGame *nGame, CTCPSock
 	m_GProxyDisconnectNoticeSent = false;
 	m_GProxyReconnectKey = GetTicks( );
 	m_LastGProxyAckTime = 0;
-    m_PlayerId = 0;
-    m_LeftTime = 0;
+        m_PlayerId = 0;
+        m_LeftTime = 0;
 }
 
 CGamePlayer :: CGamePlayer( CPotentialPlayer *potential, unsigned char nPID, string nJoinedRealm, string nName, BYTEARRAY nInternalIP, bool nReserved ) : CPotentialPlayer( potential->m_Protocol, potential->m_Game, potential->GetSocket( ) )
@@ -283,8 +287,8 @@ CGamePlayer :: CGamePlayer( CPotentialPlayer *potential, unsigned char nPID, str
 	m_GProxyDisconnectNoticeSent = false;
 	m_GProxyReconnectKey = GetTicks( );
 	m_LastGProxyAckTime = 0;
-    m_PlayerId = 0;
-    m_LeftTime = 0;
+        m_PlayerId = 0;
+        m_LeftTime = 0;
 }
 
 CGamePlayer :: ~CGamePlayer( )

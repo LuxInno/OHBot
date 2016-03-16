@@ -566,6 +566,32 @@ CCallableGetAliases *CGHostDBMySQL :: ThreadedGetAliases( )
 	return Callable;
 }
 
+CCallableGetStatsTemplates *CGHostDBMySQL :: ThreadedGetStatsTemplates( )
+{
+        void *Connection = GetIdleConnection( );
+
+        if( !Connection )
+                m_NumConnections++;
+
+        CCallableGetStatsTemplates *Callable = new CMySQLCallableGetStatsTemplates( Connection, m_BotID, m_Server, m_Database, m_User, m_Password, m_Port );
+        CreateThread( Callable );
+        m_OutstandingCallables++;
+        return Callable;
+}
+
+CCallableGetPlayerStats *CGHostDBMySQL :: ThreadedGetPlayerStats( uint32_t aliasid, uint32_t playerid )
+{
+        void *Connection = GetIdleConnection( );
+
+        if( !Connection )
+                m_NumConnections++;
+
+        CCallableGetPlayerStats *Callable = new CMySQLCallableGetPlayerStats( aliasid, playerid, Connection, m_BotID, m_Server, m_Database, m_User, m_Password, m_Port );
+        CreateThread( Callable );
+        m_OutstandingCallables++;
+        return Callable;
+}
+
 void *CGHostDBMySQL :: GetIdleConnection( )
 {
 	void *Connection = NULL;
@@ -1257,17 +1283,17 @@ bool MySQLW3MMDVarAdd( void *conn, string *error, uint32_t botid, uint32_t gamei
 
 uint32_t MySQLGetPlayerId( void *conn, string *error, uint32_t botid, string user )
 {
-	transform( user.begin( ), user.end( ), user.begin( ), (int(*)(int))tolower );
+    transform( user.begin( ), user.end( ), user.begin( ), (int(*)(int))tolower );
     string EscLowerName = MySQLEscapeString( conn, user );
-	uint32_t RowID = 0;
-	string Query = "SELECT id FROM oh_stats_players WHERE player_lower = '" + EscLowerName + "'";
+    uint32_t RowID = 0;
+    string Query = "SELECT id FROM oh_stats_players WHERE player_lower = '" + EscLowerName + "'";
 
-	if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
-		*error = mysql_error( (MYSQL *)conn );
-	else
-		RowID = mysql_insert_id( (MYSQL *)conn );
+    if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
+            *error = mysql_error( (MYSQL *)conn );
+    else
+            RowID = mysql_insert_id( (MYSQL *)conn );
 
-	return RowID;
+    return RowID;
 }
 
 uint32_t MySQLCreatePlayerId( void *conn, string *error, uint32_t botid, string user, string ip, string realm )
@@ -1493,6 +1519,67 @@ map<uint32_t, string> MySQLGetAliases( void *conn, string *error, uint32_t botid
     }
 
 	return m_Aliases;
+}
+
+map<uint32_t, string> MySQLGetStatsTemplates( void *conn, string *error, uint32_t botid )
+{
+    map<uint32_t, string> m_Templates;
+    string Query = "SELECT alias_id, alias_template FROM oh_aliases;";
+
+    if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
+       *error = mysql_error( (MYSQL *)conn );
+    else
+    {
+        MYSQL_RES *Result = mysql_store_result( (MYSQL *)conn );
+
+        if( Result )
+        {
+            vector<string> Row = MySQLFetchRow( Result );
+            while( Row.size( ) == 2 )
+            {
+		if(Row[1].length() != 0) {
+			m_Templates[UTIL_ToUInt32(Row[0])] = Row[1];
+		}
+                Row = MySQLFetchRow( Result );
+            }
+
+            mysql_free_result( Result );
+        }
+        else
+            *error = mysql_error( (MYSQL *)conn );
+
+    }
+
+    return m_Templates;
+}
+
+map<string, string> MySQLGetPlayerStats( void *conn, string *error, uint32_t botid, uint32_t aliasid, uint32_t playerid )
+{
+    map<string, string> m_Stats;
+    string Query = "SELECT games as 'VALUE_01', score as 'VALUE_02', `wins` as 'VALUE_03', `losses` as 'VALUE_04', `draw` as 'VALUE_05', `kills` as 'VALUE_06', `deaths` as 'VALUE_07', `assists` as 'VALUE_08', `creeps` as 'VALUE_09', `denies` as 'VALUE_10', `neutrals` as 'VALUE_11', `towers` as 'VALUE_12', `rax` as 'VALUE_13', `realm` as 'REALM', `streak` as 'STREAK', `maxstreak` as 'MAXSTREAK', `losingstreak` as 'LOSINGSTREAK', `maxlosingstreak` as 'MAXLOSINGSTREAK', `zerodeaths` as 'ZERODEATHS', TRUNCATE(((`wins`*100)/`games`), 2) AS 'WINPRECENTAGE' FROM oh_stats_global WHERE `alias_id` = " + UTIL_ToString(aliasid) + " AND `pid` = " + UTIL_ToString(playerid) + ";";
+
+    if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
+        *error = mysql_error( (MYSQL *)conn );
+    else
+    {
+        MYSQL_RES *Result = mysql_store_result( (MYSQL *)conn );
+
+        if( Result )
+        {
+            vector<string> Row = MySQLFetchRow( Result );
+            while( Row.size( ) == 2 && Row[1].length() > 0)
+            {
+                m_Stats[Row[0]] = Row[1];
+                Row = MySQLFetchRow( Result );
+            }
+
+            mysql_free_result( Result );
+        }
+        else
+            *error = mysql_error( (MYSQL *)conn );
+    }
+
+    return m_Stats;
 }
 
 //
@@ -1834,6 +1921,26 @@ void CMySQLCallableGetAliases :: operator( )( )
 		m_Result = MySQLGetAliases( m_Connection, &m_Error, m_SQLBotID );
 
 	Close( );
+}
+
+void CMySQLCallableGetStatsTemplates :: operator( )( )
+{
+        Init( );
+
+        if( m_Error.empty( ) )
+                m_Result = MySQLGetStatsTemplates( m_Connection, &m_Error, m_SQLBotID );
+
+        Close( );
+}
+
+void CMySQLCallableGetPlayerStats :: operator( )( )
+{
+        Init( );
+
+        if( m_Error.empty( ) )
+                m_Result = MySQLGetPlayerStats( m_Connection, &m_Error, m_SQLBotID, m_AliasId, m_PlayerId );
+
+        Close( );
 }
 
 #endif

@@ -48,6 +48,7 @@ class CCallableGetLanguages;
 class CCallableGetMapConfig;
 class CCallableAdminList;
 class CCallableGetAliases;
+class CCallableGetStatsTemplates;
 
 class CGHost
 {
@@ -70,6 +71,7 @@ public:
     CCallableGetMapConfig *m_CallableGetMapConfig;
     CCallableAdminList *m_CallableAdminLists;
     CCallableGetAliases *m_CallableGetAliases;
+    CCallableGetStatsTemplates *m_CallableGetStatsTemplates;
 	vector<CBaseCallable *> m_Callables;	// vector of orphaned callables waiting to die
 	vector<BYTEARRAY> m_LocalAddresses;		// vector of local IP addresses
 	CLanguage *m_Language;					// language
@@ -136,16 +138,17 @@ public:
 	uint32_t m_ReplayBuildNumber;			// config value: replay build number (for saving replays)
 	bool m_TCPNoDelay;						// config value: use Nagle's algorithm or not
 	uint32_t m_MatchMakingMethod;			// config value: the matchmaking method
-    uint32_t m_NewGameId;
-    uint32_t m_LastGameIdUpdate;
-    vector<string> m_MOTD;
-    vector<string> m_GameLoaded;
-    vector<string> m_GameOver;
-    map<int, map<string, string>> m_BNetCollection;
-    map<string, map<uint32_t, string>> m_Translations;
-    map<string, uint32_t> m_AdminList;
-    map<uint32_t, string> m_Aliases;
-    uint32_t m_AliasId;
+        uint32_t m_NewGameId;
+        uint32_t m_LastGameIdUpdate;
+        vector<string> m_MOTD;
+        vector<string> m_GameLoaded;
+        vector<string> m_GameOver;
+        map<int, map<string, string>> m_BNetCollection;
+        map<string, map<uint32_t, string>> m_Translations;
+        map<string, uint32_t> m_AdminList;
+        map<uint32_t, string> m_Aliases;
+        uint32_t m_AliasId;
+        map<uint32_t, string> m_StatsTemplates;
 
 	CGHost( CConfig *CFG );
 	~CGHost( );

@@ -351,27 +351,36 @@ int main( int argc, char **argv )
 
 CGHost :: CGHost( CConfig *CFG )
 {
+    
+	m_UDPSocket = new CUDPSocket( );
+	m_UDPSocket->SetBroadcastTarget( CFG->GetString( "udp_broadcasttarget", string( ) ) );
+	m_UDPSocket->SetDontRoute( CFG->GetInt( "udp_dontroute", 0 ) == 0 ? false : true );
 	m_ReconnectSocket = NULL;
 	m_GPSProtocol = new CGPSProtocol( );
 	m_CRC = new CCRC32( );
 	m_CRC->Initialize( );
 	m_SHA = new CSHA1( );
 	m_CurrentGame = NULL;
-    m_CallableGetGameId = NULL;
-    m_CallableGetBotConfig = NULL;
-    m_CallableGetBotConfigText = NULL;
-    m_CallableGetLanguages = NULL;
-    m_NewGameId = 0;
-    m_LastGameIdUpdate = GetTime( );
+        m_CallableGetGameId = NULL;
+        m_CallableGetBotConfig = NULL;
+        m_CallableGetBotConfigText = NULL;
+        m_CallableGetLanguages = NULL;
+        m_CallableGetStatsTemplates = NULL;
+        m_NewGameId = 0;
+        m_LastGameIdUpdate = GetTime( );
 	CONSOLE_Print( "[GHOST] opening primary database" );
+	m_LANWar3Version = 27;
+	m_ReplayWar3Version = 27;
 
-    m_DB = new CGHostDBMySQL( CFG );
-    
-    /* load configs */
-    m_CallableGetBotConfig = m_DB->ThreadedGetBotConfigs( );
-    m_CallableGetBotConfigText = m_DB->ThreadedGetBotConfigTexts( );
-    m_CallableAdminLists = m_DB->ThreadedAdminList( "" );
-    m_CallableGetAliases = m_DB->ThreadedGetAliases( );
+
+        m_DB = new CGHostDBMySQL( CFG );
+
+        /* load configs */
+        m_CallableGetBotConfig = m_DB->ThreadedGetBotConfigs( );
+        m_CallableGetBotConfigText = m_DB->ThreadedGetBotConfigTexts( );
+        m_CallableAdminLists = m_DB->ThreadedAdminList( "" );
+        m_CallableGetAliases = m_DB->ThreadedGetAliases( );
+        m_CallableGetStatsTemplates = m_DB->ThreadedGetStatsTemplates( );
 
 	// get a list of local IP addresses
 	// this list is used elsewhere to determine if a player connecting to the bot is local or not
@@ -439,21 +448,22 @@ CGHost :: CGHost( CConfig *CFG )
 	m_Exiting = false;
 	m_ExitingNice = false;
 	m_Enabled = true;
-	m_Version = "17.0";
+	m_Version = "17.2";
 	m_LastAutoHostTime = GetTime( );
-	m_AutoHostMatchMaking = false;
-	m_AutoHostMinimumScore = 0.0;
-	m_AutoHostMaximumScore = 0.0;
-	m_AllGamesFinished = false;
-	m_AllGamesFinishedTime = 0;
+	m_HostCounter = CFG->GetInt( "bot_hostcounter", 1 );
 
 	if( m_TFT )
 		CONSOLE_Print( "[GHOST] acting as Warcraft III: The Frozen Throne" );
 	else
 		CONSOLE_Print( "[GHOST] acting as Warcraft III: Reign of Chaos" );
-        
-    m_Warcraft3Path = UTIL_AddPathSeperator( CFG->GetString( "bot_war3path", "C:\\Program Files\\Warcraft III\\" ) );
+
+	// load the battle.net connections
+	// we're just loading the config data and creating the CBNET classes here, the connections are established later (in the Update function)
+
+        m_Warcraft3Path = UTIL_AddPathSeperator( CFG->GetString( "bot_war3path", "C:\\Program Files\\Warcraft III\\" ) );
 	ExtractScripts( );
+        
+        m_CallableGetMapConfig = m_DB->ThreadedGetMapConfig( m_DefaultMap );
 
 	CONSOLE_Print( "[GHOST] GHost++ Version " + m_Version + " (with MySQL support)" );
 }
@@ -845,7 +855,7 @@ bool CGHost :: Update( long usecBlock )
 		{
 			if( m_AutoHostMap->GetValid( ) )
 			{
-				string GameName = m_AutoHostGameName + " - " + UTIL_ToString( m_NewGameId % 100 );
+				string GameName = m_AutoHostGameName + " * " + UTIL_ToString( m_NewGameId % 100 );
 
 				if( GameName.size( ) <= 31 )
 				{
@@ -915,7 +925,7 @@ bool CGHost :: Update( long usecBlock )
     if( m_CallableGetGameId && m_CallableGetGameId->GetReady( ) )
     {
         m_NewGameId = m_CallableGetGameId->GetResult( );
-        CONSOLE_Print("Got new gameid: " + UTIL_ToString(m_NewGameId));
+        CONSOLE_Print("[OHSYSTEM] Got new gameid: " + UTIL_ToString(m_NewGameId));
         m_DB->RecoverCallable( m_CallableGetGameId );
         delete m_CallableGetGameId;
         m_CallableGetGameId = NULL;
@@ -951,6 +961,8 @@ bool CGHost :: Update( long usecBlock )
         if(! m_CurrentGame ){
             m_Map = new CMap( this, m_CallableGetMapConfig->GetResult( ) );
             m_AutoHostMap = new CMap( *m_Map );
+            
+            m_SaveGame = new CSaveGame( );
         }
         
         m_DB->RecoverCallable( m_CallableGetMapConfig );
@@ -976,7 +988,16 @@ bool CGHost :: Update( long usecBlock )
         m_CallableGetAliases = NULL;
     }
     
-	return m_Exiting || AdminExit || BNETExit;
+    if( m_CallableGetStatsTemplates && m_CallableGetStatsTemplates->GetReady( )) {
+        m_StatsTemplates = m_CallableGetStatsTemplates->GetResult( );
+        CONSOLE_Print("[OHSystem] Loaded " + UTIL_ToString(m_StatsTemplates.size()) + " stats templates.");
+
+        m_DB->RecoverCallable( m_CallableGetStatsTemplates );
+        delete m_CallableGetStatsTemplates;
+        m_CallableGetStatsTemplates = NULL;
+    }
+	
+    return m_Exiting || AdminExit || BNETExit;
 }
 
 void CGHost :: EventBNETConnecting( CBNET *bnet )
@@ -1295,7 +1316,7 @@ void CGHost :: ParseConfigValues( map<string, string> configs )
             delete m_Language;
             m_Language = new CLanguage( iterator->second );
         } else if(iterator->first == "bot_tft") {
-            m_TFT = UTIL_ToUInt32(iterator->second);
+            m_TFT = UTIL_ToUInt32(iterator->second) == 0 ? false : true;
         } else if(iterator->first == "bot_bindaddress") {
             m_BindAddress = iterator->second;
         } else if(iterator->first == "bot_hostport") {
@@ -1315,9 +1336,9 @@ void CGHost :: ParseConfigValues( map<string, string> configs )
         } else if(iterator->first == "bot_savegamepath") {
             m_SaveGamePath = iterator->second;
         } else if(iterator->first == "bot_mappath") {
-            m_MapPath = iterator->second;
+            m_MapPath = UTIL_AddPathSeperator(iterator->second);
         } else if(iterator->first == "bot_savereplays") {
-            m_SaveReplays = UTIL_ToUInt32(iterator->second);
+            m_SaveReplays = UTIL_ToUInt32(iterator->second) == 0 ? false : true;
         } else if(iterator->first == "bot_replaypath") {
             m_ReplayPath = iterator->second;
         } else if(iterator->first == "replay_war3version") {
@@ -1327,31 +1348,31 @@ void CGHost :: ParseConfigValues( map<string, string> configs )
         } else if(iterator->first == "bot_virtualhostname") {
             m_VirtualHostName = iterator->second;
         } else if(iterator->first == "bot_hideipaddresses") {
-            m_HideIPAddresses = UTIL_ToUInt32(iterator->second);
+            m_HideIPAddresses = UTIL_ToUInt32(iterator->second) == 0 ? false : true;
         } else if(iterator->first == "bot_checkmultipleipusage") {
-            m_CheckMultipleIPUsage = UTIL_ToUInt32(iterator->second);
+            m_CheckMultipleIPUsage = UTIL_ToUInt32(iterator->second) == 0 ? false : true;
         } else if(iterator->first == "bot_spoofchecks") {
             m_SpoofChecks = UTIL_ToUInt32(iterator->second);
         } else if(iterator->first == "bot_requirespoofchecks") {
-            m_RequireSpoofChecks = UTIL_ToUInt32(iterator->second);
+            m_RequireSpoofChecks = UTIL_ToUInt32(iterator->second) == 0 ? false : true;
         } else if(iterator->first == "bot_reserveadmins") {
-            m_ReserveAdmins = UTIL_ToUInt32(iterator->second);
+            m_ReserveAdmins = UTIL_ToUInt32(iterator->second) == 0 ? false : true;
         } else if(iterator->first == "bot_refreshmessages") {
-            m_RefreshMessages = UTIL_ToUInt32(iterator->second);
+            m_RefreshMessages = UTIL_ToUInt32(iterator->second) == 0 ? false : true;
         } else if(iterator->first == "bot_autolock") {
-            m_AutoLock = UTIL_ToUInt32(iterator->second);
+            m_AutoLock = UTIL_ToUInt32(iterator->second) == 0 ? false : true;
         } else if(iterator->first == "bot_autosave") {
-            m_AutoSave = UTIL_ToUInt32(iterator->second);
+            m_AutoSave = UTIL_ToUInt32(iterator->second) == 0 ? false : true;
         } else if(iterator->first == "bot_allowdownloads") {
             m_AllowDownloads = UTIL_ToUInt32(iterator->second);
         } else if(iterator->first == "bot_pingduringdownloads") {
-            m_PingDuringDownloads = UTIL_ToUInt32(iterator->second);
+            m_PingDuringDownloads = UTIL_ToUInt32(iterator->second) == 0 ? false : true;
         } else if(iterator->first == "bot_maxdownloaders") {
             m_MaxDownloaders = UTIL_ToUInt32(iterator->second);
         } else if(iterator->first == "bot_maxdownloadspeed") {
             m_MaxDownloadSpeed = UTIL_ToUInt32(iterator->second);
         } else if(iterator->first == "bot_lcpings") {
-            m_LCPings = UTIL_ToUInt32(iterator->second);
+            m_LCPings = UTIL_ToUInt32(iterator->second) == 0 ? false : true;
         } else if(iterator->first == "bot_autokickping") {
             m_AutoKickPing = UTIL_ToUInt32(iterator->second);
         } else if(iterator->first == "bot_banmethod") {
@@ -1365,13 +1386,13 @@ void CGHost :: ParseConfigValues( map<string, string> configs )
         } else if(iterator->first == "bot_synclimit") {
             m_SyncLimit = UTIL_ToUInt32(iterator->second);
         } else if(iterator->first == "bot_votekickallowed") {
-            m_VoteKickAllowed = UTIL_ToUInt32(iterator->second);
+            m_VoteKickAllowed = UTIL_ToUInt32(iterator->second) == 0 ? false : true;
         } else if(iterator->first == "bot_votekickpercentage") {
             m_VoteKickPercentage = UTIL_ToUInt32(iterator->second);
         } else if(iterator->first == "bot_defaultmap") {
             m_DefaultMap = iterator->second;
         } else if(iterator->first == "tcp_nodelay") {
-            m_TCPNoDelay = UTIL_ToUInt32(iterator->second);
+            m_TCPNoDelay = UTIL_ToUInt32(iterator->second) == 0 ? false : true;
         } else if(iterator->first == "bot_matchmakingmethod") {
             m_MatchMakingMethod = UTIL_ToUInt32(iterator->second);
         } else if(iterator->first == "lan_war3version") {
@@ -1401,15 +1422,15 @@ void CGHost :: ParseConfigValues( map<string, string> configs )
             m_BNetCollection[bnetNumber][iterator->first.substr(pos)] = iterator->second;
         } else if(iterator->first == "ohs_alias_id") {
             m_AliasId = UTIL_ToUInt32(iterator->second);
+        } else {
+            CONSOLE_Print("Unused!! " + iterator->first + " of value " + iterator->second);
         }
     }
     
-    ConnectToBNets( );
+    ConnectToBNets();
     
     if(! m_CurrentGame) {
         m_CallableGetMapConfig = m_DB->ThreadedGetMapConfig( m_DefaultMap );
- 
-    	m_SaveGame = new CSaveGame( );
     }
 }
 
@@ -1453,7 +1474,7 @@ void CGHost :: ConnectToBNets( )
 	bool HoldFriends = false;
 	bool HoldClan = false;
 	bool PublicCommands = false;
-	unsigned char War3Version = 26;
+	unsigned char War3Version = 27;
 	BYTEARRAY EXEVersion = {};
 	BYTEARRAY EXEVersionHash = {};
 	string PasswordHashType = "";
@@ -1465,6 +1486,7 @@ void CGHost :: ConnectToBNets( )
         {
             size_t pos = j->first.find_first_of("_") != string::npos;
             string key = j->first.substr(pos);
+            CONSOLE_Print("VALUE [" + j->first + "] with [" + j->second + "]");
             if(key == "server" ) {
                 Server = j->second;
             } else if(key == "serveralias") {
@@ -1507,6 +1529,8 @@ void CGHost :: ConnectToBNets( )
                 PVPGNRealmName = j->second;
             } else if(key == "custommaxmessagelength") {
                 MaxMessageLength = UTIL_ToUInt32(j->second);
+            } else {
+                CONSOLE_Print("UNUSED!! " + j->first + " with " + j->second);
             }
         }
         

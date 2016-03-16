@@ -139,7 +139,7 @@ protected:
 public:
 	CBaseGame( CGHost *nGHost, CMap *nMap, CSaveGame *nSaveGame, uint16_t nHostPort, unsigned char nGameState, string nGameName, string nOwnerName, string nCreatorName, string nCreatorServer, uint32_t nGameId );
 	virtual ~CBaseGame( );
-
+        
 	virtual vector<CGameSlot> GetEnforceSlots( )	{ return m_EnforceSlots; }
 	virtual vector<PIDPlayer> GetEnforcePlayers( )	{ return m_EnforcePlayers; }
 	virtual CSaveGame *GetSaveGame( )				{ return m_SaveGame; }
@@ -246,6 +246,7 @@ public:
 	virtual CGamePlayer *GetPlayerFromName( string name, bool sensitive );
 	virtual uint32_t GetPlayerFromNamePartial( string name, CGamePlayer **player );
 	virtual CGamePlayer *GetPlayerFromColour( unsigned char colour );
+	virtual CGamePlayer *GetPlayerFromId( uint32_t id );
 	virtual unsigned char GetNewPID( );
 	virtual unsigned char GetNewColour( );
 	virtual BYTEARRAY GetPIDs( );

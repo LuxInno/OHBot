@@ -234,6 +234,16 @@ string CGHostDB :: GameUpdate( uint32_t hostcounter, uint32_t lobby, string map_
     return "";
 }
 
+map<uint32_t, string> CGHostDB :: GetStatsTemplates( )
+{
+    return {};
+}
+
+map<string, string> CGHostDB :: GetPlayerStats( uint32_t aliasid, uint32_t playerid )
+{
+    return {};
+}
+
 CCallableAdminCount *CGHostDB :: ThreadedAdminCount( string server )
 {
 	return NULL;
@@ -394,6 +404,16 @@ CCallableGetAliases *CGHostDB :: ThreadedGetAliases( )
 	return NULL;
 }
 
+CCallableGetStatsTemplates *CGHostDB :: ThreadedGetStatsTemplates( )
+{
+        return NULL;
+}
+
+CCallableGetPlayerStats *CGHostDB :: ThreadedGetPlayerStats( uint32_t aliasid, uint32_t playerid )
+{
+        return NULL;
+}
+
 //
 // Callables
 //
@@ -550,6 +570,16 @@ CCallableGameUpdate :: ~CCallableGameUpdate( )
 }
 
 CCallableGetAliases :: ~CCallableGetAliases( )
+{
+
+}
+
+CCallableGetStatsTemplates :: ~CCallableGetStatsTemplates( )
+{
+
+}
+
+CCallableGetPlayerStats :: ~CCallableGetPlayerStats( )
 {
 
 }

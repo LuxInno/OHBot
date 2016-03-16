@@ -69,7 +69,7 @@ public:
 CGame :: CGame( CGHost *nGHost, CMap *nMap, CSaveGame *nSaveGame, uint16_t nHostPort, unsigned char nGameState, string nGameName, string nOwnerName, string nCreatorName, string nCreatorServer, uint32_t nGameId ) : CBaseGame( nGHost, nMap, nSaveGame, nHostPort, nGameState, nGameName, nOwnerName, nCreatorName, nCreatorServer, nGameId )
 {
 	m_DBBanLast = NULL;
-	m_DBGame = new CDBGame( 0, string( ), m_GHost->m_MapPath + "/" + m_Map->GetMapLocalPath( ), string( ), string( ), string( ), 0 );
+	m_DBGame = new CDBGame( 0, string( ), m_GHost->m_MapPath + m_Map->GetMapLocalPath( ), string( ), string( ), string( ), 0 );
 
 	if( m_Map->GetMapType( ) == "w3mmd" )
 		m_Stats = new CStatsW3MMD( this, m_Map->GetMapStatsW3MMDCategory( ) );
@@ -118,6 +118,9 @@ CGame :: ~CGame( )
 
 	for( vector<PairedDPSCheck> :: iterator i = m_PairedDPSChecks.begin( ); i != m_PairedDPSChecks.end( ); i++ )
 		m_GHost->m_Callables.push_back( i->second );
+
+        for( vector<PairedGPS> :: iterator i = m_PairedGPS.begin( ); i != m_PairedGPS.end( ); i++ )
+                m_GHost->m_Callables.push_back( i->second );
 
 	for( vector<CDBBan *> :: iterator i = m_DBBans.begin( ); i != m_DBBans.end( ); i++ )
 		delete *i;
@@ -277,6 +280,34 @@ bool CGame :: Update( void *fd, void *send_fd )
 		else
 			i++;
 	}
+
+        for( vector<PairedGPS> :: iterator i = m_PairedGPS.begin( ); i != m_PairedGPS.end( ); )
+        {
+                if( i->second->GetReady( ) )
+                {
+			string StatsTemplate = m_GHost->m_StatsTemplates[i->second->GetAliasId( )];
+			string AliasName     = m_GHost->m_Aliases[i->second->GetAliasId( )];
+			CGamePlayer *player  = GetPlayerFromId(i->second->GetPlayerId( ));
+
+			map<string, string> stats = i->second->GetResult( );
+
+			typedef map<string, string>::iterator value_iterator;
+    			for(value_iterator value = stats.begin(); value != stats.end(); value++)
+			{
+				UTIL_Replace( StatsTemplate, "{" + value->first + "}", value->second );
+			}
+
+			SendAllChat(AliasName + " stats for " + player->GetName() + ":");
+			SendAllChat(StatsTemplate);
+
+                        m_GHost->m_DB->RecoverCallable( i->second );
+                        delete i->second;
+                        i = m_PairedGPS.erase( i );
+                }
+                else
+                        i++;
+        }
+
 
 	return CBaseGame :: Update( fd, send_fd );
 }
@@ -1415,7 +1446,7 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
 						// note: we do not use m_Map->GetMapGameType because none of the filters are set when broadcasting to LAN (also as you might expect)
 
 						uint32_t MapGameType = MAPGAMETYPE_UNKNOWN0;
-						m_GHost->m_UDPSocket->SendTo( IP, Port, m_Protocol->SEND_W3GS_GAMEINFO( m_GHost->m_TFT, m_GHost->m_LANWar3Version, UTIL_CreateByteArray( MapGameType, false ), m_Map->GetMapGameFlags( ), m_Map->GetMapWidth( ), m_Map->GetMapHeight( ), m_GameName, "Varlock", GetTime( ) - m_CreationTime, m_GHost->m_MapPath + "/" + m_Map->GetMapLocalPath( ), m_Map->GetMapCRC( ), 12, 12, m_HostPort, m_HostCounter ) );
+						m_GHost->m_UDPSocket->SendTo( IP, Port, m_Protocol->SEND_W3GS_GAMEINFO( m_GHost->m_TFT, m_GHost->m_LANWar3Version, UTIL_CreateByteArray( MapGameType, false ), m_Map->GetMapGameFlags( ), m_Map->GetMapWidth( ), m_Map->GetMapHeight( ), m_GameName, "Varlock", GetTime( ) - m_CreationTime, m_GHost->m_MapPath + m_Map->GetMapLocalPath( ), m_Map->GetMapCRC( ), 12, 12, m_HostPort, m_HostCounter ) );
 					}
 				}
 			}
@@ -1645,25 +1676,6 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
 	}
 
 	//
-	// !STATSDOTA
-	//
-
-	if( Command == "statsdota" && GetTime( ) - player->GetStatsDotASentTime( ) >= 5 )
-	{
-		string StatsUser = User;
-
-		if( !Payload.empty( ) )
-			StatsUser = Payload;
-
-		if( player->GetSpoofed( ) && ( AdminCheck || RootAdminCheck || IsOwner( User ) ) )
-			m_PairedDPSChecks.push_back( PairedDPSCheck( string( ), m_GHost->m_DB->ThreadedDotAPlayerSummaryCheck( StatsUser ) ) );
-		else
-			m_PairedDPSChecks.push_back( PairedDPSCheck( User, m_GHost->m_DB->ThreadedDotAPlayerSummaryCheck( StatsUser ) ) );
-
-		player->SetStatsDotASentTime( GetTime( ) );
-	}
-
-	//
 	// !VERSION
 	//
 
@@ -1759,6 +1771,39 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
 		}
 		else
 			SendAllChat( m_GHost->m_Language->VoteKickAcceptedNeedMoreVotes( m_KickVotePlayer, User, UTIL_ToString( VotesNeeded - Votes ) ) );
+	}
+
+	//
+	// Stats command
+	//
+	if(! Command.empty())
+	{
+		uint32_t AliasId = 0;
+		
+
+    		typedef map<uint32_t, string>::iterator alias_iterator;
+		for(alias_iterator i = m_GHost->m_Aliases.begin(); i != m_GHost->m_Aliases.end(); i++)
+		{
+			if(i->second == Command) {
+				AliasId = i->first;
+				break;
+			} 
+		}
+
+		if(AliasId != 0) {
+			uint32_t playerid = player->GetPlayerId( );
+			if(!Payload.empty()){
+				CGamePlayer *LastMatch = NULL;
+				uint32_t Matches = GetPlayerFromNamePartial( Payload, &LastMatch );
+				if(Matches == 1) {
+					playerid = LastMatch->GetPlayerId( );
+				} else {
+					SendChat(player, "Couldn't find match for " + Payload);
+				}
+			}
+
+			m_PairedGPS.push_back( PairedGPS( player->GetName(), m_GHost->m_DB->ThreadedGetPlayerStats( AliasId, playerid )));
+		}
 	}
 
 	return HideCommand;

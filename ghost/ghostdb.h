@@ -55,6 +55,8 @@ class CCallableGetLanguages;
 class CCallableGetMapConfig;
 class CCallableGameUpdate;
 class CCallableGetAliases;
+class CCallableGetStatsTemplates;
+class CCallableGetPlayerStats;
 class CDBBan;
 class CDBGame;
 class CDBGamePlayer;
@@ -119,7 +121,8 @@ public:
     virtual map<string, string> GetMapConfig( string configname );
     virtual string GameUpdate( uint32_t hostcounter, uint32_t lobby, string map_type, uint32_t duration, string gamename, string ownername, string creatorname, string map, uint32_t players, uint32_t total, vector<PlayerOfPlayerList> playerlist );
     virtual map<uint32_t, string> GetAliases( );
-    
+    virtual map<uint32_t, string> GetStatsTemplates( );
+    virtual map<string, string> GetPlayerStats( uint32_t aliasid, uint32_t playerid );
 	// threaded database functions
 
 	virtual void CreateThread( CBaseCallable *callable );
@@ -155,6 +158,9 @@ public:
     virtual CCallableGetMapConfig *ThreadedGetMapConfig( string configname );
     virtual CCallableGameUpdate *ThreadedGameUpdate( uint32_t hostcounter, uint32_t lobby, string map_type, uint32_t duration, string gamename, string ownername, string creatorname, string map, uint32_t players, uint32_t total, vector<PlayerOfPlayerList> playerlist );
     virtual CCallableGetAliases *ThreadedGetAliases( );
+    virtual CCallableGetStatsTemplates *ThreadedGetStatsTemplates( );
+    virtual CCallableGetPlayerStats *ThreadedGetPlayerStats( uint32_t aliasid, uint32_t playerid );
+
 };
 
 //
@@ -723,6 +729,36 @@ public:
 
 	virtual map<uint32_t, string> GetResult( )				{ return m_Result; }
 	virtual void SetResult( map<uint32_t, string> nResult )	{ m_Result = nResult; }
+};
+
+class CCallableGetStatsTemplates : virtual public CBaseCallable
+{
+protected:
+        map<uint32_t, string> m_Result;
+
+public:
+        CCallableGetStatsTemplates( ) : CBaseCallable( ), m_Result( {} ) { }
+        virtual ~CCallableGetStatsTemplates( );
+
+        virtual map<uint32_t, string> GetResult( )                              { return m_Result; }
+        virtual void SetResult( map<uint32_t, string> nResult ) { m_Result = nResult; }
+};
+
+class CCallableGetPlayerStats : virtual public CBaseCallable
+{
+protected:
+	uint32_t m_AliasId;
+	uint32_t m_PlayerId;
+        map<string, string> m_Result;
+
+public:
+        CCallableGetPlayerStats( uint32_t nAliasId, uint32_t nPlayerId ) : CBaseCallable( ), m_AliasId( nAliasId ), m_PlayerId( nPlayerId ), m_Result( {} ) { }
+        virtual ~CCallableGetPlayerStats( );
+
+	virtual uint32_t GetAliasId( ) 						{ return m_AliasId; }
+	virtual uint32_t GetPlayerId( )						{ return m_PlayerId; }
+        virtual map<string, string> GetResult( )                              { return m_Result; }
+        virtual void SetResult( map<string, string> nResult ) { m_Result = nResult; }
 };
 
 //

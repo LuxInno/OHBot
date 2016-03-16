@@ -251,7 +251,7 @@ void CTCPSocket :: DoRecv( fd_set *fd )
 
 		char buffer[1024];
 		int c = recv( m_Socket, buffer, 1024, 0 );
-
+                
 		if( c == SOCKET_ERROR && GetLastError( ) != EWOULDBLOCK )
 		{
 			// receive error
