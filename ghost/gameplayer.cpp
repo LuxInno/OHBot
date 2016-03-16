@@ -78,16 +78,13 @@ string CPotentialPlayer :: GetExternalIPString( )
 
 bool CPotentialPlayer :: Update( void *fd )
 {
-        CONSOLE_Print("gameplayer init");
 	if( m_DeleteMe )
 		return true;
 
 	if( !m_Socket ) {
-            CONSOLE_Print("gameplayer no socket");
             return false;
         }
 
-        CONSOLE_Print("gameplayer socket");
 	m_Socket->DoRecv( (fd_set *)fd );
 	ExtractPackets( );
 	ProcessPackets( );

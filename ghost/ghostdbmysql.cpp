@@ -18,8 +18,6 @@
 
 */
 
-#ifdef GHOST_MYSQL
-
 #include "ghost.h"
 #include "util.h"
 #include "config.h"
@@ -1289,9 +1287,27 @@ uint32_t MySQLGetPlayerId( void *conn, string *error, uint32_t botid, string use
     string Query = "SELECT id FROM oh_stats_players WHERE player_lower = '" + EscLowerName + "'";
 
     if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
-            *error = mysql_error( (MYSQL *)conn );
+        *error = mysql_error( (MYSQL *)conn );
     else
-            RowID = mysql_insert_id( (MYSQL *)conn );
+    {
+        MYSQL_RES *Result = mysql_store_result( (MYSQL *)conn );
+
+        if( Result )
+        {
+            vector<string> Row = MySQLFetchRow( Result );
+
+
+            if( Row.size( ) == 1 )
+            {
+                RowID = UTIL_ToUInt32(Row[0]);
+                Row = MySQLFetchRow( Result );
+            }
+
+            mysql_free_result( Result );
+        }
+        else
+            *error = mysql_error( (MYSQL *)conn );
+    }
 
     return RowID;
 }
@@ -1304,15 +1320,15 @@ uint32_t MySQLCreatePlayerId( void *conn, string *error, uint32_t botid, string 
     string EscIP = MySQLEscapeString( conn, ip );
     string EscRealm = MySQLEscapeString( conn, realm );
     
-	uint32_t RowID = 0;
-	string Query = "INSERT INTO oh_stats_players (player, player_lower, ip, realm, player_language) VALUES ('"+EscName+"','"+EscLowerName+"','"+EscIP+"','"+EscRealm+"');";
+    uint32_t RowID = 0;
+    string Query = "INSERT INTO oh_stats_players (player, player_lower, ip, realm, player_language) VALUES ('"+EscName+"','"+EscLowerName+"','"+EscIP+"','"+EscRealm+"');";
 
-	if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
-		*error = mysql_error( (MYSQL *)conn );
-	else
-		RowID = mysql_insert_id( (MYSQL *)conn );
+    if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
+        *error = mysql_error( (MYSQL *)conn );
+    else
+        RowID = mysql_insert_id( (MYSQL *)conn );
 
-	return RowID;
+    return RowID;
 }
 
 uint32_t MySQLGetGameId( void *conn, string *error, uint32_t botid )
@@ -1339,21 +1355,21 @@ map<string, string> MySQLGetBotConfigs( void *conn, string *error, uint32_t boti
     {
         MYSQL_RES *Result = mysql_store_result( (MYSQL *)conn );
 
-		if( Result )
-		{
-			vector<string> Row = MySQLFetchRow( Result );
-            
-            
-			while( Row.size( ) == 2 )
-			{
-				m_Configs[Row[0]] = Row[1];
-				Row = MySQLFetchRow( Result );
-			}
+        if( Result )
+        {
+            vector<string> Row = MySQLFetchRow( Result );
 
-			mysql_free_result( Result );
-		}
-		else
-			*error = mysql_error( (MYSQL *)conn );
+
+            while( Row.size( ) == 2 )
+            {
+                    m_Configs[Row[0]] = Row[1];
+                    Row = MySQLFetchRow( Result );
+            }
+
+            mysql_free_result( Result );
+        }
+        else
+            *error = mysql_error( (MYSQL *)conn );
     }
 
 	return m_Configs;
@@ -1518,7 +1534,7 @@ map<uint32_t, string> MySQLGetAliases( void *conn, string *error, uint32_t botid
 			*error = mysql_error( (MYSQL *)conn );
     }
 
-	return m_Aliases;
+    return m_Aliases;
 }
 
 map<uint32_t, string> MySQLGetStatsTemplates( void *conn, string *error, uint32_t botid )
@@ -1942,5 +1958,3 @@ void CMySQLCallableGetPlayerStats :: operator( )( )
 
         Close( );
 }
-
-#endif

@@ -462,8 +462,6 @@ CGHost :: CGHost( CConfig *CFG )
 
         m_Warcraft3Path = UTIL_AddPathSeperator( CFG->GetString( "bot_war3path", "C:\\Program Files\\Warcraft III\\" ) );
 	ExtractScripts( );
-        
-        m_CallableGetMapConfig = m_DB->ThreadedGetMapConfig( m_DefaultMap );
 
 	CONSOLE_Print( "[GHOST] GHost++ Version " + m_Version + " (with MySQL support)" );
 }
@@ -900,7 +898,7 @@ bool CGHost :: Update( long usecBlock )
 			}
 			else
 			{
-				CONSOLE_Print( "[GHOST] stopped auto hosting, map config file [" + m_AutoHostMap->GetCFGFile( ) + "] is invalid" );
+				CONSOLE_Print( "[GHOST] stopped auto hosting, map config is invalid" );
 				m_AutoHostGameName.clear( );
 				m_AutoHostOwner.clear( );
 				m_AutoHostServer.clear( );
@@ -1486,7 +1484,6 @@ void CGHost :: ConnectToBNets( )
         {
             size_t pos = j->first.find_first_of("_") != string::npos;
             string key = j->first.substr(pos);
-            CONSOLE_Print("VALUE [" + j->first + "] with [" + j->second + "]");
             if(key == "server" ) {
                 Server = j->second;
             } else if(key == "serveralias") {

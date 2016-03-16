@@ -255,6 +255,7 @@ void CMap :: Load( map<string, string> config )
 	// load the map data
 
 	m_MapLocalPath = config["map_localpath"];
+        m_MapPath = config["map_path"];
 	m_MapData.clear( );
         m_MapData = UTIL_FileRead( m_GHost->m_MapPath + m_MapLocalPath );
 

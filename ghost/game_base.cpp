@@ -359,28 +359,26 @@ unsigned int CBaseGame :: SetFD( void *fd, void *send_fd, int *nfds )
 
 	if( m_Socket )
 	{
-		m_Socket->SetFD( (fd_set *)fd, (fd_set *)send_fd, nfds );
-		NumFDs++;
+            m_Socket->SetFD( (fd_set *)fd, (fd_set *)send_fd, nfds );
+            NumFDs++;
 	}
 
 	for( vector<CPotentialPlayer *> :: iterator i = m_Potentials.begin( ); i != m_Potentials.end( ); i++ )
 	{
-		if( (*i)->GetSocket( ) )
-		{
-                    CONSOLE_Print("set potential");
-			(*i)->GetSocket( )->SetFD( (fd_set *)fd, (fd_set *)send_fd, nfds );
-			NumFDs++;
-		}
+            if( (*i)->GetSocket( ) )
+            {
+                (*i)->GetSocket( )->SetFD( (fd_set *)fd, (fd_set *)send_fd, nfds );
+                NumFDs++;
+            }
 	}
 
 	for( vector<CGamePlayer *> :: iterator i = m_Players.begin( ); i != m_Players.end( ); i++ )
 	{
-		if( (*i)->GetSocket( ) )
-		{
-                    CONSOLE_Print("set player");
-			(*i)->GetSocket( )->SetFD( (fd_set *)fd, (fd_set *)send_fd, nfds );
-			NumFDs++;
-		}
+            if( (*i)->GetSocket( ) )
+            {
+                (*i)->GetSocket( )->SetFD( (fd_set *)fd, (fd_set *)send_fd, nfds );
+                NumFDs++;
+            }
 	}
 
 	return NumFDs;
@@ -422,7 +420,6 @@ bool CBaseGame :: Update( void *fd, void *send_fd )
                     player->SetPlayerId( id );
                 } else {
                     SendChat(player, "Hey you are new here! Please stand by, we shortly create an unique identifier for your.");
-                    CONSOLE_Print("here");
                     m_PairedCreatePlayerIds.push_back(m_GHost->m_DB->ThreadedCreatePlayerId(player->GetName(), player->GetExternalIPString(), player->GetJoinedRealm()));
                 }
 
@@ -444,10 +441,6 @@ bool CBaseGame :: Update( void *fd, void *send_fd )
                 if(id != 0) {
                     SendChat(player, "We have created your unique identifier: " + UTIL_ToString(id));
                     player->SetPlayerId(id);
-                } else {
-                    SendChat(player, "We are sorry, there was an error creating your unique identifier. Retrying...");
-                    CONSOLE_Print("here2");
-                    m_PairedCreatePlayerIds.push_back(m_GHost->m_DB->ThreadedCreatePlayerId(player->GetName(), player->GetExternalIPString(), player->GetJoinedRealm()));
                 }
 
                 m_GHost->m_DB->RecoverCallable( *i );
@@ -559,7 +552,7 @@ bool CBaseGame :: Update( void *fd, void *send_fd )
 				// note: we do not use m_Map->GetMapGameType because none of the filters are set when broadcasting to LAN (also as you might expect)
 
 				uint32_t MapGameType = MAPGAMETYPE_UNKNOWN0;
-				m_GHost->m_UDPSocket->Broadcast( 6112, m_Protocol->SEND_W3GS_GAMEINFO( m_GHost->m_TFT, m_GHost->m_LANWar3Version, UTIL_CreateByteArray( MapGameType, false ), m_Map->GetMapGameFlags( ), m_Map->GetMapWidth( ), m_Map->GetMapHeight( ), m_GameName, "Varlock", GetTime( ) - m_CreationTime, m_GHost->m_MapPath + m_Map->GetMapLocalPath( ), m_Map->GetMapCRC( ), 12, 12, m_HostPort, FixedHostCounter ) );
+				m_GHost->m_UDPSocket->Broadcast( 6112, m_Protocol->SEND_W3GS_GAMEINFO( m_GHost->m_TFT, m_GHost->m_LANWar3Version, UTIL_CreateByteArray( MapGameType, false ), m_Map->GetMapGameFlags( ), m_Map->GetMapWidth( ), m_Map->GetMapHeight( ), m_GameName, "Varlock", GetTime( ) - m_CreationTime, m_Map->GetMapPath( ), m_Map->GetMapCRC( ), 12, 12, m_HostPort, FixedHostCounter ) );
 			}
 		}
 
@@ -1415,10 +1408,10 @@ void CBaseGame :: SendAllActions( )
 
 void CBaseGame :: SendWelcomeMessage( CGamePlayer *player )
 {
-	// read from motd if available
+    // read from motd if available
     
-//    for( vector<string> :: iterator i = m_GHost->m_MOTD.begin( ); i != m_GHost->m_MOTD.end( ); i++ )
-//        SendChat(player, *i );
+    for( vector<string> :: iterator i = m_GHost->m_MOTD.begin( ); i != m_GHost->m_MOTD.end( ); i++ )
+        SendChat(player, *i );
 }
 
 void CBaseGame :: SendEndMessage( )
@@ -1960,7 +1953,7 @@ void CBaseGame :: EventPlayerJoined( CPotentialPlayer *potential, CIncomingJoinP
 	// we also have to be careful to not modify the m_Potentials vector since we're currently looping through it
 	CONSOLE_Print( "[GAME: " + m_GameName + "] player [" + joinPlayer->GetName( ) + "|" + potential->GetExternalIPString( ) + "] joined the game" );
 	CGamePlayer *Player = new CGamePlayer( potential, m_SaveGame ? EnforcePID : GetNewPID( ), JoinedRealm, joinPlayer->GetName( ), joinPlayer->GetInternalIP( ), Reserved );
-        //m_PairedGetPlayerIds.push_back(m_GHost->m_DB->ThreadedGetPlayerId(Player->GetName()));
+        m_PairedGetPlayerIds.push_back(m_GHost->m_DB->ThreadedGetPlayerId(Player->GetName()));
     
 	// consider LAN players to have already spoof checked since they can't
 	// since so many people have trouble with this feature we now use the JoinedRealm to determine LAN status
@@ -2044,7 +2037,7 @@ void CBaseGame :: EventPlayerJoined( CPotentialPlayer *potential, CIncomingJoinP
 	}
 
 	// send a map check packet to the new player
-	Player->Send( m_Protocol->SEND_W3GS_MAPCHECK( m_GHost->m_MapPath + m_Map->GetMapLocalPath( ), m_Map->GetMapSize( ), m_Map->GetMapInfo( ), m_Map->GetMapCRC( ), m_Map->GetMapSHA1( ) ) );
+	Player->Send( m_Protocol->SEND_W3GS_MAPCHECK( m_Map->GetMapPath( ), m_Map->GetMapSize( ), m_Map->GetMapInfo( ), m_Map->GetMapCRC( ), m_Map->GetMapSHA1( ) ) );
 
 	// send slot info to everyone, so the new player gets this info twice but everyone else still needs to know the new slot layout
 
@@ -2415,7 +2408,7 @@ void CBaseGame :: EventPlayerJoinedWithScore( CPotentialPlayer *potential, CInco
 	}
 
 	// send a map check packet to the new player
-	Player->Send( m_Protocol->SEND_W3GS_MAPCHECK( m_GHost->m_MapPath + m_Map->GetMapLocalPath( ), m_Map->GetMapSize( ), m_Map->GetMapInfo( ), m_Map->GetMapCRC( ), m_Map->GetMapSHA1( ) ) );
+	Player->Send( m_Protocol->SEND_W3GS_MAPCHECK( m_Map->GetMapPath( ), m_Map->GetMapSize( ), m_Map->GetMapInfo( ), m_Map->GetMapCRC( ), m_Map->GetMapSHA1( ) ) );
 
 	// send slot info to everyone, so the new player gets this info twice but everyone else still needs to know the new slot layout
 
@@ -3098,7 +3091,7 @@ void CBaseGame :: EventPlayerMapSize( CGamePlayer *player, CIncomingMapSize *map
 
 			// add to database
 
-			m_GHost->m_Callables.push_back( m_GHost->m_DB->ThreadedDownloadAdd( m_GHost->m_MapPath + m_Map->GetMapLocalPath( ), MapSize, player->GetName( ), player->GetExternalIPString( ), player->GetSpoofed( ) ? 1 : 0, player->GetSpoofedRealm( ), GetTicks( ) - player->GetStartedDownloadingTicks( ) ) );
+			m_GHost->m_Callables.push_back( m_GHost->m_DB->ThreadedDownloadAdd( m_Map->GetMapPath( ), MapSize, player->GetName( ), player->GetExternalIPString( ), player->GetSpoofed( ) ? 1 : 0, player->GetSpoofedRealm( ), GetTicks( ) - player->GetStartedDownloadingTicks( ) ) );
 		}
 	}
 
@@ -3318,7 +3311,7 @@ void CBaseGame :: EventGameStarted( )
 	UTIL_AppendByteArray( StatString, m_Map->GetMapWidth( ) );
 	UTIL_AppendByteArray( StatString, m_Map->GetMapHeight( ) );
 	UTIL_AppendByteArray( StatString, m_Map->GetMapCRC( ) );
-	UTIL_AppendByteArray( StatString, m_GHost->m_MapPath + m_Map->GetMapLocalPath( ) );
+	UTIL_AppendByteArray( StatString, m_Map->GetMapPath( ) );
 	UTIL_AppendByteArray( StatString, "GHost++" );
 	StatString.push_back( 0 );
 	UTIL_AppendByteArray( StatString, m_Map->GetMapSHA1( ) );		// note: in replays generated by Warcraft III it stores 20 zeros for the SHA1 instead of the real thing

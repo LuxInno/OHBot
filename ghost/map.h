@@ -96,7 +96,6 @@ public:
 
 private:
 	bool m_Valid;
-	string m_CFGFile;
 	BYTEARRAY m_MapSize;						// config value: map size (4 bytes)
 	BYTEARRAY m_MapInfo;						// config value: map info (4 bytes) -> this is the real CRC
 	BYTEARRAY m_MapCRC;							// config value: map crc (4 bytes) -> this is not the real CRC, it's the "xoro" value
@@ -123,6 +122,7 @@ private:
 	uint32_t m_MapNumPlayers;
 	uint32_t m_MapNumTeams;
 	vector<CGameSlot> m_Slots;
+        string m_MapPath;
 
 public:
 	CMap( CGHost *nGHost );
@@ -130,8 +130,8 @@ public:
 	~CMap( );
 
 	bool GetValid( )						{ return m_Valid; }
-	string GetCFGFile( )					{ return m_CFGFile; }
 	BYTEARRAY GetMapSize( )					{ return m_MapSize; }
+        string GetMapPath( )                                    { return m_MapPath; }
 	BYTEARRAY GetMapInfo( )					{ return m_MapInfo; }
 	BYTEARRAY GetMapCRC( )					{ return m_MapCRC; }
 	BYTEARRAY GetMapSHA1( )					{ return m_MapSHA1; }
