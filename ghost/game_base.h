@@ -43,6 +43,7 @@ class CCallableScoreCheck;
 class CCallableGetPlayerId;
 class CCallableCreatePlayerId;
 class CCallableGameUpdate;
+class CCallableGetPlayerScore;
 
 typedef pair<string,CCallableGameUpdate *> PairedGameUpdate;
 
@@ -58,9 +59,10 @@ protected:
 	vector<CPotentialPlayer *> m_Potentials;		// vector of potential players (connections that haven't sent a W3GS_REQJOIN packet yet)
 	vector<CGamePlayer *> m_Players;				// vector of players
 	vector<CCallableScoreCheck *> m_ScoreChecks;
-    vector<PairedGameUpdate> m_GameUpdates;
+        vector<PairedGameUpdate> m_GameUpdates;
 	vector<CCallableGetPlayerId *> m_PairedGetPlayerIds;		// vector of paired threaded database get player ids in progress
 	vector<CCallableCreatePlayerId *> m_PairedCreatePlayerIds;		// vector of paired threaded database get player ids in progress
+	vector<CCallableGetPlayerScore *> m_PairedGetPlayerScores;		// vector of paired threaded database get player scores in progress
 	queue<CIncomingAction *> m_Actions;				// queue of actions to be sent
 	vector<string> m_Reserved;						// vector of player names with reserved slots (from the !hold command)
 	set<string> m_IgnoredNames;						// set of player names to NOT print ban messages for when joining because they've already been printed
@@ -133,8 +135,11 @@ protected:
 	bool m_AutoSave;								// if we should auto save the game before someone disconnects
 	bool m_MatchMaking;								// if matchmaking mode is enabled
 	bool m_LocalAdminMessages;						// if local admin messages should be relayed or not
-    uint32_t m_GameId;
-    uint32_t m_LastGameUpdateTime;
+        uint32_t m_GameId;
+        uint32_t m_LastGameUpdateTime;
+        string m_EloChange;
+        vector<string> m_LobbyLog;
+        vector<string> m_GameLog;
 
 public:
 	CBaseGame( CGHost *nGHost, CMap *nMap, CSaveGame *nSaveGame, uint16_t nHostPort, unsigned char nGameState, string nGameName, string nOwnerName, string nCreatorName, string nCreatorServer, uint32_t nGameId );
@@ -280,8 +285,14 @@ public:
 	virtual void CreateFakePlayer( );
 	virtual void DeleteFakePlayer( );
     
-    virtual void DoGameUpdate(bool reset);
-    virtual vector<PlayerOfPlayerList> GetPlayerListOfGame( );
+        virtual void DoGameUpdate(bool reset);
+        virtual vector<PlayerOfPlayerList> GetPlayerListOfGame( );
+        virtual bool IsRootAdmin( string username );
+        virtual bool IsAdmin( string username );
+        virtual bool IsPremium( string username );
+        virtual void ShowTeamScores( CGamePlayer *player );
+        CDBBan *IsBannedName( string name );
+        CDBBan *IsBannedIP( string ip );
 };
 
 #endif

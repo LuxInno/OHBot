@@ -151,12 +151,6 @@ CBNET :: ~CBNET( )
 
 	for( vector<CIncomingClanList *> :: iterator i = m_Clans.begin( ); i != m_Clans.end( ); i++ )
 		delete *i;
-
-	for( vector<PairedGPSCheck> :: iterator i = m_PairedGPSChecks.begin( ); i != m_PairedGPSChecks.end( ); i++ )
-		m_GHost->m_Callables.push_back( i->second );
-
-	for( vector<PairedDPSCheck> :: iterator i = m_PairedDPSChecks.begin( ); i != m_PairedDPSChecks.end( ); i++ )
-		m_GHost->m_Callables.push_back( i->second );
 }
 
 BYTEARRAY CBNET :: GetUniqueName( )
@@ -182,72 +176,6 @@ unsigned int CBNET :: SetFD( void *fd, void *send_fd, int *nfds )
 
 bool CBNET :: Update( void *fd, void *send_fd )
 {
-	//
-	// update callables
-	//
-    
-	for( vector<PairedGPSCheck> :: iterator i = m_PairedGPSChecks.begin( ); i != m_PairedGPSChecks.end( ); )
-	{
-		if( i->second->GetReady( ) )
-		{
-			CDBGamePlayerSummary *GamePlayerSummary = i->second->GetResult( );
-
-			if( GamePlayerSummary )
-				QueueChatCommand( m_GHost->m_Language->HasPlayedGamesWithThisBot( i->second->GetName( ), GamePlayerSummary->GetFirstGameDateTime( ), GamePlayerSummary->GetLastGameDateTime( ), UTIL_ToString( GamePlayerSummary->GetTotalGames( ) ), UTIL_ToString( (float)GamePlayerSummary->GetAvgLoadingTime( ) / 1000, 2 ), UTIL_ToString( GamePlayerSummary->GetAvgLeftPercent( ) ) ), i->first, !i->first.empty( ) );
-			else
-				QueueChatCommand( m_GHost->m_Language->HasntPlayedGamesWithThisBot( i->second->GetName( ) ), i->first, !i->first.empty( ) );
-
-			m_GHost->m_DB->RecoverCallable( i->second );
-			delete i->second;
-			i = m_PairedGPSChecks.erase( i );
-		}
-		else
-			i++;
-	}
-
-	for( vector<PairedDPSCheck> :: iterator i = m_PairedDPSChecks.begin( ); i != m_PairedDPSChecks.end( ); )
-	{
-		if( i->second->GetReady( ) )
-		{
-			CDBDotAPlayerSummary *DotAPlayerSummary = i->second->GetResult( );
-
-			if( DotAPlayerSummary )
-			{
-				string Summary = m_GHost->m_Language->HasPlayedDotAGamesWithThisBot(	i->second->GetName( ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalGames( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalWins( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalLosses( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalKills( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalDeaths( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalCreepKills( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalCreepDenies( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalAssists( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalNeutralKills( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalTowerKills( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalRaxKills( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalCourierKills( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgKills( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgDeaths( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgCreepKills( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgCreepDenies( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgAssists( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgNeutralKills( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgTowerKills( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgRaxKills( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgCourierKills( ), 2 ) );
-
-				QueueChatCommand( Summary, i->first, !i->first.empty( ) );
-			}
-			else
-				QueueChatCommand( m_GHost->m_Language->HasntPlayedDotAGamesWithThisBot( i->second->GetName( ) ), i->first, !i->first.empty( ) );
-
-			m_GHost->m_DB->RecoverCallable( i->second );
-			delete i->second;
-			i = m_PairedDPSChecks.erase( i );
-		}
-		else
-			i++;
-	}
 
 	// we return at the end of each if statement so we don't have to deal with errors related to the order of the if statements
 	// that means it might take a few ms longer to complete a task involving multiple steps (in this case, reconnecting) due to blocking or sleeping

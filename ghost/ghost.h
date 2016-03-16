@@ -41,6 +41,7 @@ class CLanguage;
 class CMap;
 class CSaveGame;
 class CConfig;
+class CCallableBanList;
 class CCallableGetGameId;
 class CCallableGetBotConfigs;
 class CCallableGetBotConfigTexts;
@@ -49,6 +50,7 @@ class CCallableGetMapConfig;
 class CCallableAdminList;
 class CCallableGetAliases;
 class CCallableGetStatsTemplates;
+class CDBBan;
 
 class CGHost
 {
@@ -64,14 +66,15 @@ public:
 	vector<CBaseGame *> m_Games;			// these games are in progress
 	CGHostDB *m_DB;							// database
 	CGHostDB *m_DBLocal;					// local database (for temporary data)
-    CCallableGetGameId *m_CallableGetGameId;
-    CCallableGetBotConfigs *m_CallableGetBotConfig;
-    CCallableGetBotConfigTexts *m_CallableGetBotConfigText;
-    CCallableGetLanguages *m_CallableGetLanguages;
-    CCallableGetMapConfig *m_CallableGetMapConfig;
-    CCallableAdminList *m_CallableAdminLists;
-    CCallableGetAliases *m_CallableGetAliases;
-    CCallableGetStatsTemplates *m_CallableGetStatsTemplates;
+        CCallableGetGameId *m_CallableGetGameId;
+        CCallableGetBotConfigs *m_CallableGetBotConfig;
+        CCallableGetBotConfigTexts *m_CallableGetBotConfigText;
+        CCallableGetLanguages *m_CallableGetLanguages;
+        CCallableGetMapConfig *m_CallableGetMapConfig;
+        CCallableAdminList *m_CallableAdminLists;
+        CCallableGetAliases *m_CallableGetAliases;
+        CCallableGetStatsTemplates *m_CallableGetStatsTemplates;
+        CCallableBanList *m_CallableBanList;
 	vector<CBaseCallable *> m_Callables;	// vector of orphaned callables waiting to die
 	vector<BYTEARRAY> m_LocalAddresses;		// vector of local IP addresses
 	CLanguage *m_Language;					// language
@@ -149,6 +152,8 @@ public:
         map<uint32_t, string> m_Aliases;
         uint32_t m_AliasId;
         map<uint32_t, string> m_StatsTemplates;
+        vector<CDBBan *> m_BanList;
+        uint32_t m_LastListRefresh;
 
 	CGHost( CConfig *CFG );
 	~CGHost( );

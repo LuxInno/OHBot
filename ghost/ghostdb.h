@@ -57,6 +57,7 @@ class CCallableGameUpdate;
 class CCallableGetAliases;
 class CCallableGetStatsTemplates;
 class CCallableGetPlayerStats;
+class CCallableGetPlayerScore;
 class CDBBan;
 class CDBGame;
 class CDBGamePlayer;
@@ -97,7 +98,7 @@ public:
 	virtual bool BanRemove( string server, string user );
 	virtual bool BanRemove( string user );
 	virtual vector<CDBBan *> BanList( string server );
-	virtual uint32_t GameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid );
+	virtual uint32_t GameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid, vector<string> lobbylog, vector<string> gamelog, string elochange );
 	virtual uint32_t GamePlayerAdd( uint32_t gameid, string name, string ip, uint32_t spoofed, string spoofedrealm, uint32_t reserved, uint32_t loadingtime, uint32_t left, string leftreason, uint32_t team, uint32_t colour, uint32_t playerid );
 	virtual uint32_t GamePlayerCount( string name );
 	virtual CDBGamePlayerSummary *GamePlayerSummaryCheck( string name );
@@ -113,16 +114,17 @@ public:
 	virtual bool W3MMDVarAdd( uint32_t gameid, map<VarP,double> var_reals );
 	virtual bool W3MMDVarAdd( uint32_t gameid, map<VarP,string> var_strings );
 	virtual uint32_t GetPlayerId( string user );
-    virtual uint32_t CreatePlayerId( string user, string ip, string realm );
-    virtual uint32_t GetGameId( );
-    virtual map<string, string> GetBotConfigs( );
-    virtual map<string, vector<string> > GetBotConfigTexts( );
-    virtual map<string, map<uint32_t, string> > GetLanguages( );
-    virtual map<string, string> GetMapConfig( string configname );
-    virtual string GameUpdate( uint32_t hostcounter, uint32_t lobby, string map_type, uint32_t duration, string gamename, string ownername, string creatorname, string map, uint32_t players, uint32_t total, vector<PlayerOfPlayerList> playerlist );
-    virtual map<uint32_t, string> GetAliases( );
-    virtual map<uint32_t, string> GetStatsTemplates( );
-    virtual map<string, string> GetPlayerStats( uint32_t aliasid, uint32_t playerid );
+        virtual uint32_t CreatePlayerId( string user, string ip, string realm );
+        virtual uint32_t GetGameId( );
+        virtual map<string, string> GetBotConfigs( );
+        virtual map<string, vector<string> > GetBotConfigTexts( );
+        virtual map<string, map<uint32_t, string> > GetLanguages( );
+        virtual map<string, string> GetMapConfig( string configname );
+        virtual string GameUpdate( uint32_t hostcounter, uint32_t lobby, string map_type, uint32_t duration, string gamename, string ownername, string creatorname, string map, uint32_t players, uint32_t total, vector<PlayerOfPlayerList> playerlist );
+        virtual map<uint32_t, string> GetAliases( );
+        virtual map<uint32_t, string> GetStatsTemplates( );
+        virtual map<string, string> GetPlayerStats( uint32_t aliasid, uint32_t playerid );
+        virtual double GetPlayerScore( uint32_t aliasid, uint32_t playerid );
 	// threaded database functions
 
 	virtual void CreateThread( CBaseCallable *callable );
@@ -137,7 +139,7 @@ public:
 	virtual CCallableBanRemove *ThreadedBanRemove( string server, string user );
 	virtual CCallableBanRemove *ThreadedBanRemove( string user );
 	virtual CCallableBanList *ThreadedBanList( string server );
-	virtual CCallableGameAdd *ThreadedGameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid );
+	virtual CCallableGameAdd *ThreadedGameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid, vector<string> lobbylog, vector<string> gamelog, string elochange );
 	virtual CCallableGamePlayerAdd *ThreadedGamePlayerAdd( uint32_t gameid, string name, string ip, uint32_t spoofed, string spoofedrealm, uint32_t reserved, uint32_t loadingtime, uint32_t left, string leftreason, uint32_t team, uint32_t colour, uint32_t playerid );
 	virtual CCallableGamePlayerSummaryCheck *ThreadedGamePlayerSummaryCheck( string name );
 	virtual CCallableDotAGameAdd *ThreadedDotAGameAdd( uint32_t gameid, uint32_t winner, uint32_t min, uint32_t sec );
@@ -151,16 +153,16 @@ public:
 	virtual CCallableW3MMDVarAdd *ThreadedW3MMDVarAdd( uint32_t gameid, map<VarP,string> var_strings );
 	virtual CCallableGetPlayerId *ThreadedGetPlayerId( string user );
 	virtual CCallableCreatePlayerId *ThreadedCreatePlayerId( string user, string ip, string realm );
-    virtual CCallableGetGameId *ThreadedGetGameId( );
-    virtual CCallableGetBotConfigs *ThreadedGetBotConfigs( );
-    virtual CCallableGetBotConfigTexts *ThreadedGetBotConfigTexts( );
-    virtual CCallableGetLanguages *ThreadedGetLanguages( );
-    virtual CCallableGetMapConfig *ThreadedGetMapConfig( string configname );
-    virtual CCallableGameUpdate *ThreadedGameUpdate( uint32_t hostcounter, uint32_t lobby, string map_type, uint32_t duration, string gamename, string ownername, string creatorname, string map, uint32_t players, uint32_t total, vector<PlayerOfPlayerList> playerlist );
-    virtual CCallableGetAliases *ThreadedGetAliases( );
-    virtual CCallableGetStatsTemplates *ThreadedGetStatsTemplates( );
-    virtual CCallableGetPlayerStats *ThreadedGetPlayerStats( uint32_t aliasid, uint32_t playerid );
-
+        virtual CCallableGetGameId *ThreadedGetGameId( );
+        virtual CCallableGetBotConfigs *ThreadedGetBotConfigs( );
+        virtual CCallableGetBotConfigTexts *ThreadedGetBotConfigTexts( );
+        virtual CCallableGetLanguages *ThreadedGetLanguages( );
+        virtual CCallableGetMapConfig *ThreadedGetMapConfig( string configname );
+        virtual CCallableGameUpdate *ThreadedGameUpdate( uint32_t hostcounter, uint32_t lobby, string map_type, uint32_t duration, string gamename, string ownername, string creatorname, string map, uint32_t players, uint32_t total, vector<PlayerOfPlayerList> playerlist );
+        virtual CCallableGetAliases *ThreadedGetAliases( );
+        virtual CCallableGetStatsTemplates *ThreadedGetStatsTemplates( );
+        virtual CCallableGetPlayerStats *ThreadedGetPlayerStats( uint32_t aliasid, uint32_t playerid );
+        virtual CCallableGetPlayerScore *ThreadedGetPlayerScore( uint32_t aliasid, uint32_t playerid );
 };
 
 //
@@ -390,12 +392,15 @@ protected:
 	uint32_t m_GameState;
 	string m_CreatorName;
 	string m_CreatorServer;
-    uint32_t m_GameId;
-    uint32_t m_AliasId;
+        uint32_t m_GameId;
+        uint32_t m_AliasId;
+        vector<string> m_LobbyLog;
+        vector<string> m_GameLog;
+        string m_EloChange;
 	uint32_t m_Result;
 
 public:
-	CCallableGameAdd( string nServer, string nMap, string nGameName, string nOwnerName, uint32_t nDuration, uint32_t nGameState, string nCreatorName, string nCreatorServer, uint32_t nGameId, uint32_t nAliasId) : CBaseCallable( ), m_Server( nServer ), m_Map( nMap ), m_GameName( nGameName ), m_OwnerName( nOwnerName ), m_Duration( nDuration ), m_GameState( nGameState ), m_CreatorName( nCreatorName ), m_CreatorServer( nCreatorServer ), m_GameId( nGameId ), m_AliasId( nAliasId ), m_Result( 0 ) { }
+	CCallableGameAdd( string nServer, string nMap, string nGameName, string nOwnerName, uint32_t nDuration, uint32_t nGameState, string nCreatorName, string nCreatorServer, uint32_t nGameId, uint32_t nAliasId, vector<string> nLobbyLog, vector<string> nGameLog, string nEloChange) : CBaseCallable( ), m_Server( nServer ), m_Map( nMap ), m_GameName( nGameName ), m_OwnerName( nOwnerName ), m_Duration( nDuration ), m_GameState( nGameState ), m_CreatorName( nCreatorName ), m_CreatorServer( nCreatorServer ), m_GameId( nGameId ), m_AliasId( nAliasId ), m_LobbyLog( nLobbyLog ), m_GameLog( nGameLog ), m_EloChange( nEloChange ), m_Result( 0 ) { }
 	virtual ~CCallableGameAdd( );
 
 	virtual uint32_t GetResult( )				{ return m_Result; }
@@ -759,6 +764,23 @@ public:
 	virtual uint32_t GetPlayerId( )						{ return m_PlayerId; }
         virtual map<string, string> GetResult( )                              { return m_Result; }
         virtual void SetResult( map<string, string> nResult ) { m_Result = nResult; }
+};
+
+class CCallableGetPlayerScore : virtual public CBaseCallable
+{
+protected:
+	uint32_t m_AliasId;
+	uint32_t m_PlayerId;
+        double m_Result;
+
+public:
+        CCallableGetPlayerScore( uint32_t nAliasId, uint32_t nPlayerId ) : CBaseCallable( ), m_AliasId( nAliasId ), m_PlayerId( nPlayerId ), m_Result( 0 ) { }
+        virtual ~CCallableGetPlayerScore( );
+
+	virtual uint32_t GetAliasId( ) 						{ return m_AliasId; }
+	virtual uint32_t GetPlayerId( )						{ return m_PlayerId; }
+        virtual double GetResult( )                              { return m_Result; }
+        virtual void SetResult( double nResult ) { m_Result = nResult; }
 };
 
 //

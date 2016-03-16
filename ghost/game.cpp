@@ -107,18 +107,6 @@ CGame :: ~CGame( )
 		m_CallableGameAdd = NULL;
 	}
 
-	for( vector<PairedBanCheck> :: iterator i = m_PairedBanChecks.begin( ); i != m_PairedBanChecks.end( ); i++ )
-		m_GHost->m_Callables.push_back( i->second );
-
-	for( vector<PairedBanAdd> :: iterator i = m_PairedBanAdds.begin( ); i != m_PairedBanAdds.end( ); i++ )
-		m_GHost->m_Callables.push_back( i->second );
-
-	for( vector<PairedGPSCheck> :: iterator i = m_PairedGPSChecks.begin( ); i != m_PairedGPSChecks.end( ); i++ )
-		m_GHost->m_Callables.push_back( i->second );
-
-	for( vector<PairedDPSCheck> :: iterator i = m_PairedDPSChecks.begin( ); i != m_PairedDPSChecks.end( ); i++ )
-		m_GHost->m_Callables.push_back( i->second );
-
         for( vector<PairedGPS> :: iterator i = m_PairedGPS.begin( ); i != m_PairedGPS.end( ); i++ )
                 m_GHost->m_Callables.push_back( i->second );
 
@@ -146,141 +134,6 @@ CGame :: ~CGame( )
 
 bool CGame :: Update( void *fd, void *send_fd )
 {
-	// update callables
-
-	for( vector<PairedBanCheck> :: iterator i = m_PairedBanChecks.begin( ); i != m_PairedBanChecks.end( ); )
-	{
-		if( i->second->GetReady( ) )
-		{
-			CDBBan *Ban = i->second->GetResult( );
-
-			if( Ban )
-				SendAllChat( m_GHost->m_Language->UserWasBannedOnByBecause( i->second->GetServer( ), i->second->GetUser( ), Ban->GetDate( ), Ban->GetAdmin( ), Ban->GetReason( ) ) );
-			else
-				SendAllChat( m_GHost->m_Language->UserIsNotBanned( i->second->GetServer( ), i->second->GetUser( ) ) );
-
-			m_GHost->m_DB->RecoverCallable( i->second );
-			delete i->second;
-			i = m_PairedBanChecks.erase( i );
-		}
-		else
-			i++;
-	}
-
-	for( vector<PairedBanAdd> :: iterator i = m_PairedBanAdds.begin( ); i != m_PairedBanAdds.end( ); )
-	{
-		if( i->second->GetReady( ) )
-		{
-
-			m_GHost->m_DB->RecoverCallable( i->second );
-			delete i->second;
-			i = m_PairedBanAdds.erase( i );
-		}
-		else
-			i++;
-	}
-
-	for( vector<PairedGPSCheck> :: iterator i = m_PairedGPSChecks.begin( ); i != m_PairedGPSChecks.end( ); )
-	{
-		if( i->second->GetReady( ) )
-		{
-			CDBGamePlayerSummary *GamePlayerSummary = i->second->GetResult( );
-
-			if( GamePlayerSummary )
-			{
-				if( i->first.empty( ) )
-					SendAllChat( m_GHost->m_Language->HasPlayedGamesWithThisBot( i->second->GetName( ), GamePlayerSummary->GetFirstGameDateTime( ), GamePlayerSummary->GetLastGameDateTime( ), UTIL_ToString( GamePlayerSummary->GetTotalGames( ) ), UTIL_ToString( (float)GamePlayerSummary->GetAvgLoadingTime( ) / 1000, 2 ), UTIL_ToString( GamePlayerSummary->GetAvgLeftPercent( ) ) ) );
-				else
-				{
-					CGamePlayer *Player = GetPlayerFromName( i->first, true );
-
-					if( Player )
-						SendChat( Player, m_GHost->m_Language->HasPlayedGamesWithThisBot( i->second->GetName( ), GamePlayerSummary->GetFirstGameDateTime( ), GamePlayerSummary->GetLastGameDateTime( ), UTIL_ToString( GamePlayerSummary->GetTotalGames( ) ), UTIL_ToString( (float)GamePlayerSummary->GetAvgLoadingTime( ) / 1000, 2 ), UTIL_ToString( GamePlayerSummary->GetAvgLeftPercent( ) ) ) );
-				}
-			}
-			else
-			{
-				if( i->first.empty( ) )
-					SendAllChat( m_GHost->m_Language->HasntPlayedGamesWithThisBot( i->second->GetName( ) ) );
-				else
-				{
-					CGamePlayer *Player = GetPlayerFromName( i->first, true );
-
-					if( Player )
-						SendChat( Player, m_GHost->m_Language->HasntPlayedGamesWithThisBot( i->second->GetName( ) ) );
-				}
-			}
-
-			m_GHost->m_DB->RecoverCallable( i->second );
-			delete i->second;
-			i = m_PairedGPSChecks.erase( i );
-		}
-		else
-			i++;
-	}
-
-	for( vector<PairedDPSCheck> :: iterator i = m_PairedDPSChecks.begin( ); i != m_PairedDPSChecks.end( ); )
-	{
-		if( i->second->GetReady( ) )
-		{
-			CDBDotAPlayerSummary *DotAPlayerSummary = i->second->GetResult( );
-
-			if( DotAPlayerSummary )
-			{
-				string Summary = m_GHost->m_Language->HasPlayedDotAGamesWithThisBot(	i->second->GetName( ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalGames( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalWins( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalLosses( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalKills( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalDeaths( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalCreepKills( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalCreepDenies( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalAssists( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalNeutralKills( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalTowerKills( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalRaxKills( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetTotalCourierKills( ) ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgKills( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgDeaths( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgCreepKills( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgCreepDenies( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgAssists( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgNeutralKills( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgTowerKills( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgRaxKills( ), 2 ),
-																						UTIL_ToString( DotAPlayerSummary->GetAvgCourierKills( ), 2 ) );
-
-				if( i->first.empty( ) )
-					SendAllChat( Summary );
-				else
-				{
-					CGamePlayer *Player = GetPlayerFromName( i->first, true );
-
-					if( Player )
-						SendChat( Player, Summary );
-				}
-			}
-			else
-			{
-				if( i->first.empty( ) )
-					SendAllChat( m_GHost->m_Language->HasntPlayedDotAGamesWithThisBot( i->second->GetName( ) ) );
-				else
-				{
-					CGamePlayer *Player = GetPlayerFromName( i->first, true );
-
-					if( Player )
-						SendChat( Player, m_GHost->m_Language->HasntPlayedDotAGamesWithThisBot( i->second->GetName( ) ) );
-				}
-			}
-
-			m_GHost->m_DB->RecoverCallable( i->second );
-			delete i->second;
-			i = m_PairedDPSChecks.erase( i );
-		}
-		else
-			i++;
-	}
-
         for( vector<PairedGPS> :: iterator i = m_PairedGPS.begin( ); i != m_PairedGPS.end( ); )
         {
                 if( i->second->GetReady( ) )
@@ -294,11 +147,14 @@ bool CGame :: Update( void *fd, void *send_fd )
 			typedef map<string, string>::iterator value_iterator;
     			for(value_iterator value = stats.begin(); value != stats.end(); value++)
 			{
-				UTIL_Replace( StatsTemplate, "{" + value->first + "}", value->second );
+                            UTIL_Replace( StatsTemplate, "{" + value->first + "}", value->second );
 			}
-
-			SendAllChat(AliasName + " stats for " + player->GetName() + ":");
-			SendAllChat(StatsTemplate);
+                        
+                        if(stats.size() > 0) {
+                            SendAllChat(StatsTemplate);
+                        } else {
+                            SendAllChat( player->GetName() + " has not played any " + AliasName + " yet.");
+                        }
 
                         m_GHost->m_DB->RecoverCallable( i->second );
                         delete i->second;
@@ -378,7 +234,7 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
 
 	if( player->GetSpoofed( ) && ( AdminCheck || RootAdminCheck || IsOwner( User ) ) )
 	{
-		CONSOLE_Print( "[GAME: " + m_GameName + "] admin [" + User + "] sent command [" + Command + "] with payload [" + Payload + "]" );
+		CONSOLE_Print( "[GAME: " + m_GameName + "] " + (RootAdminCheck ? "rootadmin" : "admin") + " [" + User + "] sent command [" + Command + "] with payload [" + Payload + "]" );
 
 		if( !m_Locked || RootAdminCheck || IsOwner( User ) )
 		{
@@ -397,82 +253,6 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
 			{
 				SendAllChat( m_GHost->m_Language->CountDownAborted( ) );
 				m_CountDownStarted = false;
-			}
-
-			//
-			// !ADDBAN
-			// !BAN
-			//
-
-			if( ( Command == "addban" || Command == "ban" ) && !Payload.empty( ) && !m_GHost->m_BNETs.empty( ) )
-			{
-				// extract the victim and the reason
-				// e.g. "Varlock leaver after dying" -> victim: "Varlock", reason: "leaver after dying"
-
-				string Victim;
-				string Reason;
-				stringstream SS;
-				SS << Payload;
-				SS >> Victim;
-
-				if( !SS.eof( ) )
-				{
-					getline( SS, Reason );
-					string :: size_type Start = Reason.find_first_not_of( " " );
-
-					if( Start != string :: npos )
-						Reason = Reason.substr( Start );
-				}
-
-				if( m_GameLoaded )
-				{
-					string VictimLower = Victim;
-					transform( VictimLower.begin( ), VictimLower.end( ), VictimLower.begin( ), (int(*)(int))tolower );
-					uint32_t Matches = 0;
-					CDBBan *LastMatch = NULL;
-
-					// try to match each player with the passed string (e.g. "Varlock" would be matched with "lock")
-					// we use the m_DBBans vector for this in case the player already left and thus isn't in the m_Players vector anymore
-
-					for( vector<CDBBan *> :: iterator i = m_DBBans.begin( ); i != m_DBBans.end( ); i++ )
-					{
-						string TestName = (*i)->GetName( );
-						transform( TestName.begin( ), TestName.end( ), TestName.begin( ), (int(*)(int))tolower );
-
-						if( TestName.find( VictimLower ) != string :: npos )
-						{
-							Matches++;
-							LastMatch = *i;
-
-							// if the name matches exactly stop any further matching
-
-							if( TestName == VictimLower )
-							{
-								Matches = 1;
-								break;
-							}
-						}
-					}
-
-					if( Matches == 0 )
-						SendAllChat( m_GHost->m_Language->UnableToBanNoMatchesFound( Victim ) );
-					else if( Matches == 1 )
-						m_PairedBanAdds.push_back( PairedBanAdd( User, m_GHost->m_DB->ThreadedBanAdd( LastMatch->GetServer( ), LastMatch->GetName( ), LastMatch->GetIP( ), m_GameName, User, Reason ) ) );
-					else
-						SendAllChat( m_GHost->m_Language->UnableToBanFoundMoreThanOneMatch( Victim ) );
-				}
-				else
-				{
-					CGamePlayer *LastMatch = NULL;
-					uint32_t Matches = GetPlayerFromNamePartial( Victim, &LastMatch );
-
-					if( Matches == 0 )
-						SendAllChat( m_GHost->m_Language->UnableToBanNoMatchesFound( Victim ) );
-					else if( Matches == 1 )
-						m_PairedBanAdds.push_back( PairedBanAdd( User, m_GHost->m_DB->ThreadedBanAdd( LastMatch->GetJoinedRealm( ), LastMatch->GetName( ), LastMatch->GetExternalIPString( ), m_GameName, User, Reason ) ) );
-					else
-						SendAllChat( m_GHost->m_Language->UnableToBanFoundMoreThanOneMatch( Victim ) );
-				}
 			}
 
 			//
@@ -560,13 +340,6 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
 			}
 
 			//
-			// !BANLAST
-			//
-
-			if( Command == "banlast" && m_GameLoaded && !m_GHost->m_BNETs.empty( ) && m_DBBanLast )
-				m_PairedBanAdds.push_back( PairedBanAdd( User, m_GHost->m_DB->ThreadedBanAdd( m_DBBanLast->GetServer( ), m_DBBanLast->GetName( ), m_DBBanLast->GetIP( ), m_GameName, User, Payload ) ) );
-
-			//
 			// !CHECK
 			//
 
@@ -584,23 +357,13 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
 						bool LastMatchAdminCheck = IsAdmin( LastMatch->GetName() );
 						bool LastMatchRootAdminCheck = IsRootAdmin( LastMatch->GetName() );
 
-						SendAllChat( m_GHost->m_Language->CheckedPlayer( LastMatch->GetName( ), LastMatch->GetNumPings( ) > 0 ? UTIL_ToString( LastMatch->GetPing( m_GHost->m_LCPings ) ) + "ms" : "N/A", m_GHost->m_DBLocal->FromCheck( UTIL_ByteArrayToUInt32( LastMatch->GetExternalIP( ), true ) ), LastMatchAdminCheck || LastMatchRootAdminCheck ? "Yes" : "No", IsOwner( LastMatch->GetName( ) ) ? "Yes" : "No", LastMatch->GetSpoofed( ) ? "Yes" : "No", LastMatch->GetSpoofedRealm( ).empty( ) ? "N/A" : LastMatch->GetSpoofedRealm( ), LastMatch->GetReserved( ) ? "Yes" : "No" ) );
+						SendAllChat( m_GHost->m_Language->CheckedPlayer( LastMatch->GetName( ), LastMatch->GetNumPings( ) > 0 ? UTIL_ToString( LastMatch->GetPing( m_GHost->m_LCPings ) ) + "ms" : "N/A", "??", LastMatchAdminCheck || LastMatchRootAdminCheck ? "Yes" : "No", IsOwner( LastMatch->GetName( ) ) ? "Yes" : "No", LastMatch->GetSpoofed( ) ? "Yes" : "No", LastMatch->GetSpoofedRealm( ).empty( ) ? "N/A" : LastMatch->GetSpoofedRealm( ), LastMatch->GetReserved( ) ? "Yes" : "No" ) );
 					}
 					else
 						SendAllChat( m_GHost->m_Language->UnableToCheckPlayerFoundMoreThanOneMatch( Payload ) );
 				}
 				else
-					SendAllChat( m_GHost->m_Language->CheckedPlayer( User, player->GetNumPings( ) > 0 ? UTIL_ToString( player->GetPing( m_GHost->m_LCPings ) ) + "ms" : "N/A", m_GHost->m_DBLocal->FromCheck( UTIL_ByteArrayToUInt32( player->GetExternalIP( ), true ) ), AdminCheck || RootAdminCheck ? "Yes" : "No", IsOwner( User ) ? "Yes" : "No", player->GetSpoofed( ) ? "Yes" : "No", player->GetSpoofedRealm( ).empty( ) ? "N/A" : player->GetSpoofedRealm( ), player->GetReserved( ) ? "Yes" : "No" ) );
-			}
-
-			//
-			// !CHECKBAN
-			//
-
-			if( Command == "checkban" && !Payload.empty( ) && !m_GHost->m_BNETs.empty( ) )
-			{
-				for( vector<CBNET *> :: iterator i = m_GHost->m_BNETs.begin( ); i != m_GHost->m_BNETs.end( ); i++ )
-					m_PairedBanChecks.push_back( PairedBanCheck( User, m_GHost->m_DB->ThreadedBanCheck( (*i)->GetServer( ), Payload, string( ) ) ) );
+					SendAllChat( m_GHost->m_Language->CheckedPlayer( User, player->GetNumPings( ) > 0 ? UTIL_ToString( player->GetPing( m_GHost->m_LCPings ) ) + "ms" : "N/A", "??", AdminCheck || RootAdminCheck ? "Yes" : "No", IsOwner( User ) ? "Yes" : "No", player->GetSpoofed( ) ? "Yes" : "No", player->GetSpoofedRealm( ).empty( ) ? "N/A" : player->GetSpoofedRealm( ), player->GetReserved( ) ? "Yes" : "No" ) );
 			}
 
 			//
@@ -968,39 +731,6 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
 			}
 
 			//
-			// !FROM
-			//
-
-			if( Command == "from" )
-			{
-				string Froms;
-
-				for( vector<CGamePlayer *> :: iterator i = m_Players.begin( ); i != m_Players.end( ); i++ )
-				{
-					// we reverse the byte order on the IP because it's stored in network byte order
-
-					Froms += (*i)->GetNameTerminated( );
-					Froms += ": (";
-					Froms += m_GHost->m_DBLocal->FromCheck( UTIL_ByteArrayToUInt32( (*i)->GetExternalIP( ), true ) );
-					Froms += ")";
-
-					if( i != m_Players.end( ) - 1 )
-						Froms += ", ";
-
-					if( ( m_GameLoading || m_GameLoaded ) && Froms.size( ) > 100 )
-					{
-						// cut the text into multiple lines ingame
-
-						SendAllChat( Froms );
-						Froms.clear( );
-					}
-				}
-
-				if( !Froms.empty( ) )
-					SendAllChat( Froms );
-			}
-
-			//
 			// !HCL
 			//
 
@@ -1289,84 +1019,6 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
 			}
 
 			//
-			// !PRIV (rehost as private game)
-			//
-
-			if( Command == "priv" && !Payload.empty( ) && !m_CountDownStarted && !m_SaveGame )
-			{
-				if( Payload.length() < 31 )
-				{
-					CONSOLE_Print( "[GAME: " + m_GameName + "] trying to rehost as private game [" + Payload + "]" );
-					SendAllChat( m_GHost->m_Language->TryingToRehostAsPrivateGame( Payload ) );
-					m_GameState = GAME_PRIVATE;
-					m_LastGameName = m_GameName;
-					m_GameName = Payload;
-					m_HostCounter = m_GHost->m_HostCounter++;
-					m_RefreshError = false;
-					m_RefreshRehosted = true;
-
-					for( vector<CBNET *> :: iterator i = m_GHost->m_BNETs.begin( ); i != m_GHost->m_BNETs.end( ); i++ )
-					{
-						// unqueue any existing game refreshes because we're going to assume the next successful game refresh indicates that the rehost worked
-						// this ignores the fact that it's possible a game refresh was just sent and no response has been received yet
-						// we assume this won't happen very often since the only downside is a potential false positive
-
-						(*i)->UnqueueGameRefreshes( );
-						(*i)->QueueGameUncreate( );
-						(*i)->QueueEnterChat( );
-
-						// we need to send the game creation message now because private games are not refreshed
-
-						(*i)->QueueGameCreate( m_GameState, m_GameName, string( ), m_Map, NULL, m_HostCounter );
-
-						if( (*i)->GetPasswordHashType( ) != "pvpgn" )
-							(*i)->QueueEnterChat( );
-					}
-
-					m_CreationTime = GetTime( );
-					m_LastRefreshTime = GetTime( );
-				}
-				else
-					SendAllChat( m_GHost->m_Language->UnableToCreateGameNameTooLong( Payload ) );
-			}
-
-			//
-			// !PUB (rehost as public game)
-			//
-
-			if( Command == "pub" && !Payload.empty( ) && !m_CountDownStarted && !m_SaveGame )
-			{
-				if( Payload.length() < 31 )
-				{
-					CONSOLE_Print( "[GAME: " + m_GameName + "] trying to rehost as public game [" + Payload + "]" );
-					SendAllChat( m_GHost->m_Language->TryingToRehostAsPublicGame( Payload ) );
-					m_GameState = GAME_PUBLIC;
-					m_LastGameName = m_GameName;
-					m_GameName = Payload;
-					m_HostCounter = m_GHost->m_HostCounter++;
-					m_RefreshError = false;
-					m_RefreshRehosted = true;
-
-					for( vector<CBNET *> :: iterator i = m_GHost->m_BNETs.begin( ); i != m_GHost->m_BNETs.end( ); i++ )
-					{
-						// unqueue any existing game refreshes because we're going to assume the next successful game refresh indicates that the rehost worked
-						// this ignores the fact that it's possible a game refresh was just sent and no response has been received yet
-						// we assume this won't happen very often since the only downside is a potential false positive
-
-						(*i)->UnqueueGameRefreshes( );
-						(*i)->QueueGameUncreate( );
-						(*i)->QueueEnterChat( );
-
-						// the game creation message will be sent on the next refresh
-					}
-
-					m_CreationTime = GetTime( );
-					m_LastRefreshTime = GetTime( );
-				}
-				else
-					SendAllChat( m_GHost->m_Language->UnableToCreateGameNameTooLong( Payload ) );
-			}
-			//
 			// !REFRESH (turn on or off refresh messages)
 			//
 
@@ -1654,26 +1306,7 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
 	//
 
 	if( Command == "checkme" )
-		SendChat( player, m_GHost->m_Language->CheckedPlayer( User, player->GetNumPings( ) > 0 ? UTIL_ToString( player->GetPing( m_GHost->m_LCPings ) ) + "ms" : "N/A", m_GHost->m_DBLocal->FromCheck( UTIL_ByteArrayToUInt32( player->GetExternalIP( ), true ) ), AdminCheck || RootAdminCheck ? "Yes" : "No", IsOwner( User ) ? "Yes" : "No", player->GetSpoofed( ) ? "Yes" : "No", player->GetSpoofedRealm( ).empty( ) ? "N/A" : player->GetSpoofedRealm( ), player->GetReserved( ) ? "Yes" : "No" ) );
-
-	//
-	// !STATS
-	//
-
-	if( Command == "stats" && GetTime( ) - player->GetStatsSentTime( ) >= 5 )
-	{
-		string StatsUser = User;
-
-		if( !Payload.empty( ) )
-			StatsUser = Payload;
-
-		if( player->GetSpoofed( ) && ( AdminCheck || RootAdminCheck || IsOwner( User ) ) )
-			m_PairedGPSChecks.push_back( PairedGPSCheck( string( ), m_GHost->m_DB->ThreadedGamePlayerSummaryCheck( StatsUser ) ) );
-		else
-			m_PairedGPSChecks.push_back( PairedGPSCheck( User, m_GHost->m_DB->ThreadedGamePlayerSummaryCheck( StatsUser ) ) );
-
-		player->SetStatsSentTime( GetTime( ) );
-	}
+		SendChat( player, m_GHost->m_Language->CheckedPlayer( User, player->GetNumPings( ) > 0 ? UTIL_ToString( player->GetPing( m_GHost->m_LCPings ) ) + "ms" : "N/A", "??", AdminCheck || RootAdminCheck ? "Yes" : "No", IsOwner( User ) ? "Yes" : "No", player->GetSpoofed( ) ? "Yes" : "No", player->GetSpoofedRealm( ).empty( ) ? "N/A" : player->GetSpoofedRealm( ), player->GetReserved( ) ? "Yes" : "No" ) );
 
 	//
 	// !VERSION
@@ -1773,37 +1406,46 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
 			SendAllChat( m_GHost->m_Language->VoteKickAcceptedNeedMoreVotes( m_KickVotePlayer, User, UTIL_ToString( VotesNeeded - Votes ) ) );
 	}
 
-	//
+        //
+        // !SCORES
+        //
+        if( Command == "scores" || Command == "elo") {
+            ShowTeamScores( player );
+        }	
+        
+        //
 	// Stats command
 	//
 	if(! Command.empty())
 	{
-		uint32_t AliasId = 0;
-		
+            uint32_t AliasId = 0;
 
-    		typedef map<uint32_t, string>::iterator alias_iterator;
-		for(alias_iterator i = m_GHost->m_Aliases.begin(); i != m_GHost->m_Aliases.end(); i++)
-		{
-			if(i->second == Command) {
-				AliasId = i->first;
-				break;
-			} 
-		}
+            typedef map<uint32_t, string>::iterator alias_iterator;
+            for(alias_iterator i = m_GHost->m_Aliases.begin(); i != m_GHost->m_Aliases.end(); i++)
+            {
+                string aliasName = i->second;
+                transform( aliasName.begin( ), aliasName.end( ), aliasName.begin( ), (int(*)(int))tolower );
+                remove_if(aliasName.begin(), aliasName.end(), ::isspace);
+                if(aliasName == Command || (Command.length() < aliasName.length() && aliasName.substr(0, Command.length()) == Command) ) {
+                    AliasId = i->first;
+                    break;
+                } 
+            }
 
-		if(AliasId != 0) {
-			uint32_t playerid = player->GetPlayerId( );
-			if(!Payload.empty()){
-				CGamePlayer *LastMatch = NULL;
-				uint32_t Matches = GetPlayerFromNamePartial( Payload, &LastMatch );
-				if(Matches == 1) {
-					playerid = LastMatch->GetPlayerId( );
-				} else {
-					SendChat(player, "Couldn't find match for " + Payload);
-				}
-			}
-
-			m_PairedGPS.push_back( PairedGPS( player->GetName(), m_GHost->m_DB->ThreadedGetPlayerStats( AliasId, playerid )));
-		}
+            if(AliasId != 0 || Command == "stats") {
+                uint32_t playerid = player->GetPlayerId( );
+                if(!Payload.empty()){
+                    CGamePlayer *LastMatch = NULL;
+                    uint32_t Matches = GetPlayerFromNamePartial( Payload, &LastMatch );
+                    if(Matches == 1) {
+                        playerid = LastMatch->GetPlayerId( );
+                    } else {
+                        SendChat(player, "Couldn't find match for " + Payload);
+                    }
+                }
+                
+                m_PairedGPS.push_back( PairedGPS( player->GetName(), m_GHost->m_DB->ThreadedGetPlayerStats( AliasId, playerid )));
+            }
 	}
 
 	return HideCommand;
@@ -1830,41 +1472,5 @@ bool CGame :: IsGameDataSaved( )
 void CGame :: SaveGameData( )
 {
 	CONSOLE_Print( "[GAME: " + m_GameName + "] saving game data to database" );
-	m_CallableGameAdd = m_GHost->m_DB->ThreadedGameAdd( m_GHost->m_BNETs.size( ) == 1 ? m_GHost->m_BNETs[0]->GetServer( ) : string( ), m_DBGame->GetMap( ), m_GameName, m_OwnerName, m_GameTicks / 1000, m_GameState, m_CreatorName, m_CreatorServer, m_GameId, m_GHost->m_AliasId );
-}
-
-bool CGame :: IsRootAdmin( string username )
-{
-    bool IsRootAdmin = false;
-    transform( username.begin( ), username.end( ), username.begin( ), (int(*)(int))tolower );
-    
-    if(m_GHost->m_AdminList.find(username) != m_GHost->m_AdminList.end()) {
-        IsRootAdmin = m_GHost->m_AdminList[username] > 9;
-    }
-    
-    return IsRootAdmin;
-}
-
-bool CGame :: IsAdmin( string username )
-{
-    bool IsAdmin = false;
-    transform( username.begin( ), username.end( ), username.begin( ), (int(*)(int))tolower );
-    
-    if(m_GHost->m_AdminList.find(username) != m_GHost->m_AdminList.end()) {
-        IsAdmin = m_GHost->m_AdminList[username] > 4;
-    }
-    
-    return IsAdmin;
-}
-
-bool CGame :: IsPremium( string username )
-{
-    bool IsPremium = false;
-    transform( username.begin( ), username.end( ), username.begin( ), (int(*)(int))tolower );
-    
-    if(m_GHost->m_AdminList.find(username) != m_GHost->m_AdminList.end()) {
-        IsPremium = m_GHost->m_AdminList[username] > 2;
-    }
-    
-    return IsPremium;
+	m_CallableGameAdd = m_GHost->m_DB->ThreadedGameAdd( m_GHost->m_BNETs.size( ) == 1 ? m_GHost->m_BNETs[0]->GetServer( ) : string( ), m_DBGame->GetMap( ), m_GameName, m_OwnerName, m_GameTicks / 1000, m_GameState, m_CreatorName, m_CreatorServer, m_GameId, m_GHost->m_AliasId, m_LobbyLog, m_GameLog, m_EloChange );
 }

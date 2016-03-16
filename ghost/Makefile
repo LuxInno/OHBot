@@ -29,7 +29,7 @@ ifeq ($(SYSTEM),Darwin)
 CFLAGS += -I../mysql/include/
 endif
 
-OBJS = bncsutilinterface.o bnet.o bnetprotocol.o bnlsclient.o bnlsprotocol.o commandpacket.o config.o crc32.o game.o game_base.o gameplayer.o gameprotocol.o gameslot.o ghost.o ghostdb.o ghostdbmysql.o gpsprotocol.o language.o map.o packed.o replay.o savegame.o sha1.o socket.o stats.o statsdota.o statsw3mmd.o util.o
+OBJS = bncsutilinterface.o bnet.o bnetprotocol.o bnlsclient.o bnlsprotocol.o commandpacket.o config.o crc32.o elo.o game.o game_base.o gameplayer.o gameprotocol.o gameslot.o ghost.o ghostdb.o ghostdbmysql.o gpsprotocol.o language.o map.o packed.o replay.o savegame.o sha1.o socket.o stats.o statsdota.o statsw3mmd.o util.o
 COBJS = 
 PROGS = ./ghost++
 
@@ -59,8 +59,9 @@ bnlsprotocol.o: ghost.h includes.h util.h bnlsprotocol.h
 commandpacket.o: ghost.h includes.h commandpacket.h
 config.o: ghost.h includes.h config.h
 crc32.o: ghost.h includes.h crc32.h
+elo.o: elo.h
 game.o: ghost.h includes.h util.h config.h language.h socket.h ghostdb.h bnet.h map.h packed.h savegame.h gameplayer.h gameprotocol.h game_base.h game.h stats.h statsdota.h statsw3mmd.h
-game_base.o: ghost.h includes.h util.h config.h language.h socket.h ghostdb.h bnet.h map.h packed.h savegame.h replay.h gameplayer.h gameprotocol.h game_base.h next_combination.h
+game_base.o: ghost.h includes.h util.h config.h language.h socket.h ghostdb.h bnet.h map.h packed.h savegame.h replay.h gameplayer.h gameprotocol.h game_base.h next_combination.h elo.h
 gameplayer.o: ghost.h includes.h util.h language.h socket.h commandpacket.h bnet.h map.h gameplayer.h gameprotocol.h gpsprotocol.h game_base.h
 gameprotocol.o: ghost.h includes.h util.h crc32.h gameplayer.h gameprotocol.h game_base.h
 gameslot.o: ghost.h includes.h gameslot.h

@@ -366,6 +366,7 @@ CGHost :: CGHost( CConfig *CFG )
         m_CallableGetBotConfigText = NULL;
         m_CallableGetLanguages = NULL;
         m_CallableGetStatsTemplates = NULL;
+        m_CallableBanList = NULL;
         m_NewGameId = 0;
         m_LastGameIdUpdate = GetTime( );
 	CONSOLE_Print( "[GHOST] opening primary database" );
@@ -381,6 +382,9 @@ CGHost :: CGHost( CConfig *CFG )
         m_CallableAdminLists = m_DB->ThreadedAdminList( "" );
         m_CallableGetAliases = m_DB->ThreadedGetAliases( );
         m_CallableGetStatsTemplates = m_DB->ThreadedGetStatsTemplates( );
+        m_CallableBanList = m_DB->ThreadedBanList( "" );
+        
+        m_LastListRefresh = GetTime();
 
 	// get a list of local IP addresses
 	// this list is used elsewhere to determine if a player connecting to the bot is local or not
@@ -844,7 +848,7 @@ bool CGHost :: Update( long usecBlock )
 
 	// autohost
 
-	if( !m_AutoHostGameName.empty( ) && m_AutoHostMaximumGames != 0 && m_AutoHostAutoStartPlayers != 0 && GetTime( ) - m_LastAutoHostTime >= 30 && m_NewGameId != 0 )
+	if( !m_AutoHostGameName.empty( ) && m_AutoHostMaximumGames != 0 && m_AutoHostAutoStartPlayers != 0 && GetTime( ) - m_LastAutoHostTime >= 10 && m_NewGameId != 0 )
 	{
 		// copy all the checks from CGHost :: CreateGame here because we don't want to spam the chat when there's an error
 		// instead we fail silently and try again soon
@@ -994,7 +998,23 @@ bool CGHost :: Update( long usecBlock )
         delete m_CallableGetStatsTemplates;
         m_CallableGetStatsTemplates = NULL;
     }
+       
+    if(! m_CallableBanList && GetTime( ) - m_LastListRefresh >= 300) {
+        m_CallableBanList = m_DB->ThreadedBanList("");
+        m_CallableAdminLists = m_DB->ThreadedAdminList("");
+        
+        m_LastListRefresh = GetTime( );
+    }
 	
+    if( m_CallableBanList && m_CallableBanList->GetReady( )) {
+        m_BanList = m_CallableBanList->GetResult( );
+        CONSOLE_Print("[OHSystem] Loaded " + UTIL_ToString(m_BanList.size()) + " bans");
+
+        m_DB->RecoverCallable( m_CallableBanList );
+        delete m_CallableBanList;
+        m_CallableBanList = NULL;
+    }
+        
     return m_Exiting || AdminExit || BNETExit;
 }
 

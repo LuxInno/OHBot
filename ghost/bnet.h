@@ -33,12 +33,7 @@ class CBNLSClient;
 class CIncomingFriendList;
 class CIncomingClanList;
 class CIncomingChatEvent;
-class CCallableGamePlayerSummaryCheck;
-class CCallableDotAPlayerSummaryCheck;
 class CDBBan;
-
-typedef pair<string,CCallableGamePlayerSummaryCheck *> PairedGPSCheck;
-typedef pair<string,CCallableDotAPlayerSummaryCheck *> PairedDPSCheck;
 
 class CBNET
 {
@@ -54,8 +49,6 @@ private:
 	queue<BYTEARRAY> m_OutPackets;					// queue of outgoing packets to be sent (to prevent getting kicked for flooding)
 	vector<CIncomingFriendList *> m_Friends;		// vector of friends
 	vector<CIncomingClanList *> m_Clans;			// vector of clan members
-	vector<PairedGPSCheck> m_PairedGPSChecks;		// vector of paired threaded database game player summary checks in progress
-	vector<PairedDPSCheck> m_PairedDPSChecks;		// vector of paired threaded database DotA player summary checks in progress
 	bool m_Exiting;									// set to true and this class will be deleted next update
 	string m_Server;								// battle.net server to connect to
 	string m_ServerIP;								// battle.net server to connect to (the IP address so we don't have to resolve it every time we connect)

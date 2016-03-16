@@ -109,7 +109,7 @@ vector<CDBBan *> CGHostDB :: BanList( string server )
 	return vector<CDBBan *>( );
 }
 
-uint32_t CGHostDB :: GameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid )
+uint32_t CGHostDB :: GameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid, vector<string> lobbylog, vector<string> gamelog, string elochange )
 {
 	return 0;
 }
@@ -244,6 +244,11 @@ map<string, string> CGHostDB :: GetPlayerStats( uint32_t aliasid, uint32_t playe
     return {};
 }
 
+double CGHostDB :: GetPlayerScore( uint32_t aliasid, uint32_t playerid )
+{
+    return 0;
+}
+
 CCallableAdminCount *CGHostDB :: ThreadedAdminCount( string server )
 {
 	return NULL;
@@ -299,7 +304,7 @@ CCallableBanList *CGHostDB :: ThreadedBanList( string server )
 	return NULL;
 }
 
-CCallableGameAdd *CGHostDB :: ThreadedGameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid )
+CCallableGameAdd *CGHostDB :: ThreadedGameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid, vector<string> lobbylog, vector<string> gamelog, string elochange )
 {
 	return NULL;
 }
@@ -410,6 +415,11 @@ CCallableGetStatsTemplates *CGHostDB :: ThreadedGetStatsTemplates( )
 }
 
 CCallableGetPlayerStats *CGHostDB :: ThreadedGetPlayerStats( uint32_t aliasid, uint32_t playerid )
+{
+        return NULL;
+}
+
+CCallableGetPlayerScore *CGHostDB :: ThreadedGetPlayerScore( uint32_t aliasid, uint32_t playerid )
 {
         return NULL;
 }
@@ -580,6 +590,11 @@ CCallableGetStatsTemplates :: ~CCallableGetStatsTemplates( )
 }
 
 CCallableGetPlayerStats :: ~CCallableGetPlayerStats( )
+{
+
+}
+
+CCallableGetPlayerScore :: ~CCallableGetPlayerScore( )
 {
 
 }

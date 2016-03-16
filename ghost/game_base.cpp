@@ -31,6 +31,7 @@
 #include "replay.h"
 #include "gameplayer.h"
 #include "gameprotocol.h"
+#include "elo.h"
 #include "game_base.h"
 
 #include <cmath>
@@ -254,6 +255,9 @@ CBaseGame :: ~CBaseGame( )
 	for( vector<CCallableGetPlayerId *> :: iterator i = m_PairedGetPlayerIds.begin( ); i != m_PairedGetPlayerIds.end( ); i++ )
 		m_GHost->m_Callables.push_back( *i );
 
+	for( vector<CCallableGetPlayerScore *> :: iterator i = m_PairedGetPlayerScores.begin( ); i != m_PairedGetPlayerScores.end( ); i++ )
+		m_GHost->m_Callables.push_back( *i );
+        
 	for( vector<CCallableCreatePlayerId *> :: iterator i = m_PairedCreatePlayerIds.begin( ); i != m_PairedCreatePlayerIds.end( ); i++ )
 		m_GHost->m_Callables.push_back( *i );
 
@@ -418,6 +422,7 @@ bool CBaseGame :: Update( void *fd, void *send_fd )
                 if(id != 0){
                     SendChat(player, "Welcome back " + player->GetName() + "! Enjoy your stay and good luck for your game :-)");
                     player->SetPlayerId( id );
+                    m_PairedGetPlayerScores.push_back(m_GHost->m_DB->ThreadedGetPlayerScore( m_GHost->m_AliasId, id ));
                 } else {
                     SendChat(player, "Hey you are new here! Please stand by, we shortly create an unique identifier for your.");
                     m_PairedCreatePlayerIds.push_back(m_GHost->m_DB->ThreadedCreatePlayerId(player->GetName(), player->GetExternalIPString(), player->GetJoinedRealm()));
@@ -431,6 +436,25 @@ bool CBaseGame :: Update( void *fd, void *send_fd )
                     i++;
 	}
 
+	for( vector<CCallableGetPlayerScore *> :: iterator i = m_PairedGetPlayerScores.begin( ); i != m_PairedGetPlayerScores.end( ); )
+	{
+            if( (*i)->GetReady( ) )
+            {
+                CGamePlayer *player = GetPlayerFromId((*i)->GetPlayerId());
+                double score = (*i)->GetResult();
+
+                if(player) {
+                    player->SetScore(score);
+                }
+                
+                m_GHost->m_DB->RecoverCallable( *i );
+                delete *i;
+                i = m_PairedGetPlayerScores.erase( i );
+            }
+            else
+                    i++;
+	}
+        
 	for( vector<CCallableCreatePlayerId *> :: iterator i = m_PairedCreatePlayerIds.begin( ); i != m_PairedCreatePlayerIds.end( ); )
 	{
             if( (*i)->GetReady( ) )
@@ -1711,65 +1735,56 @@ void CBaseGame :: EventPlayerJoined( CPotentialPlayer *potential, CIncomingJoinP
 
 	if( m_GHost->m_BanMethod != 0 )
 	{
-		for( vector<CBNET *> :: iterator i = m_GHost->m_BNETs.begin( ); i != m_GHost->m_BNETs.end( ); i++ )
-		{
-			if( (*i)->GetServer( ) == JoinedRealm )
-			{
-				CDBBan *Ban = (*i)->IsBannedName( joinPlayer->GetName( ) );
+            CDBBan *Ban = IsBannedName( joinPlayer->GetName( ) );
 
-				if( Ban )
-				{
-					if( m_GHost->m_BanMethod == 1 || m_GHost->m_BanMethod == 3 )
-					{
-						CONSOLE_Print( "[GAME: " + m_GameName + "] player [" + joinPlayer->GetName( ) + "|" + potential->GetExternalIPString( ) + "] is trying to join the game but is banned by name" );
+            if( Ban )
+            {
+                if( m_GHost->m_BanMethod == 1 || m_GHost->m_BanMethod == 3 )
+                {
+                    CONSOLE_Print( "[GAME: " + m_GameName + "] player [" + joinPlayer->GetName( ) + "|" + potential->GetExternalIPString( ) + "] is trying to join the game but is banned by name" );
 
-						if( m_IgnoredNames.find( joinPlayer->GetName( ) ) == m_IgnoredNames.end( ) )
-						{
-							SendAllChat( m_GHost->m_Language->TryingToJoinTheGameButBannedByName( joinPlayer->GetName( ) ) );
-							SendAllChat( m_GHost->m_Language->UserWasBannedOnByBecause( Ban->GetServer( ), Ban->GetName( ), Ban->GetDate( ), Ban->GetAdmin( ), Ban->GetReason( ) ) );
-							m_IgnoredNames.insert( joinPlayer->GetName( ) );
-						}
+                    if( m_IgnoredNames.find( joinPlayer->GetName( ) ) == m_IgnoredNames.end( ) )
+                    {
+                            SendAllChat( m_GHost->m_Language->TryingToJoinTheGameButBannedByName( joinPlayer->GetName( ) ) );
+                            SendAllChat( m_GHost->m_Language->UserWasBannedOnByBecause( Ban->GetServer( ), Ban->GetName( ), Ban->GetDate( ), Ban->GetAdmin( ), Ban->GetReason( ) ) );
+                            m_IgnoredNames.insert( joinPlayer->GetName( ) );
+                    }
+                    
+                    // let banned players "join" the game with an arbitrary PID then immediately close the connection
+                    // this causes them to be kicked back to the chat channel on battle.net
 
-						// let banned players "join" the game with an arbitrary PID then immediately close the connection
-						// this causes them to be kicked back to the chat channel on battle.net
+                    vector<CGameSlot> Slots = m_Map->GetSlots( );
+                    potential->Send( m_Protocol->SEND_W3GS_SLOTINFOJOIN( 1, potential->GetSocket( )->GetPort( ), potential->GetExternalIP( ), Slots, 0, m_Map->GetMapLayoutStyle( ), m_Map->GetMapNumPlayers( ) ) );
+                    potential->SetDeleteMe( true );
+                    return;
+                }
+            }
+            
+            Ban = IsBannedIP( potential->GetExternalIPString( ) );
 
-						vector<CGameSlot> Slots = m_Map->GetSlots( );
-						potential->Send( m_Protocol->SEND_W3GS_SLOTINFOJOIN( 1, potential->GetSocket( )->GetPort( ), potential->GetExternalIP( ), Slots, 0, m_Map->GetMapLayoutStyle( ), m_Map->GetMapNumPlayers( ) ) );
-						potential->SetDeleteMe( true );
-						return;
-					}
+            if( Ban )
+            {
+                if( m_GHost->m_BanMethod == 2 || m_GHost->m_BanMethod == 3 )
+                {
+                    CONSOLE_Print( "[GAME: " + m_GameName + "] player [" + joinPlayer->GetName( ) + "|" + potential->GetExternalIPString( ) + "] is trying to join the game but is banned by IP address" );
 
-					break;
-				}
-			}
+                    if( m_IgnoredNames.find( joinPlayer->GetName( ) ) == m_IgnoredNames.end( ) )
+                    {
+                            SendAllChat( m_GHost->m_Language->TryingToJoinTheGameButBannedByIP( joinPlayer->GetName( ), potential->GetExternalIPString( ), Ban->GetName( ) ) );
+                            SendAllChat( m_GHost->m_Language->UserWasBannedOnByBecause( Ban->GetServer( ), Ban->GetName( ), Ban->GetDate( ), Ban->GetAdmin( ), Ban->GetReason( ) ) );
+                            m_IgnoredNames.insert( joinPlayer->GetName( ) );
+                    }
 
-			CDBBan *Ban = (*i)->IsBannedIP( potential->GetExternalIPString( ) );
+                    
+                    // let banned players "join" the game with an arbitrary PID then immediately close the connection
+                    // this causes them to be kicked back to the chat channel on battle.net
 
-			if( Ban )
-			{
-				if( m_GHost->m_BanMethod == 2 || m_GHost->m_BanMethod == 3 )
-				{
-					CONSOLE_Print( "[GAME: " + m_GameName + "] player [" + joinPlayer->GetName( ) + "|" + potential->GetExternalIPString( ) + "] is trying to join the game but is banned by IP address" );
-
-					if( m_IgnoredNames.find( joinPlayer->GetName( ) ) == m_IgnoredNames.end( ) )
-					{
-						SendAllChat( m_GHost->m_Language->TryingToJoinTheGameButBannedByIP( joinPlayer->GetName( ), potential->GetExternalIPString( ), Ban->GetName( ) ) );
-						SendAllChat( m_GHost->m_Language->UserWasBannedOnByBecause( Ban->GetServer( ), Ban->GetName( ), Ban->GetDate( ), Ban->GetAdmin( ), Ban->GetReason( ) ) );
-						m_IgnoredNames.insert( joinPlayer->GetName( ) );
-					}
-
-					// let banned players "join" the game with an arbitrary PID then immediately close the connection
-					// this causes them to be kicked back to the chat channel on battle.net
-
-					vector<CGameSlot> Slots = m_Map->GetSlots( );
-					potential->Send( m_Protocol->SEND_W3GS_SLOTINFOJOIN( 1, potential->GetSocket( )->GetPort( ), potential->GetExternalIP( ), Slots, 0, m_Map->GetMapLayoutStyle( ), m_Map->GetMapNumPlayers( ) ) );
-					potential->SetDeleteMe( true );
-					return;
-				}
-
-				break;
-			}
-		}
+                    vector<CGameSlot> Slots = m_Map->GetSlots( );
+                    potential->Send( m_Protocol->SEND_W3GS_SLOTINFOJOIN( 1, potential->GetSocket( )->GetPort( ), potential->GetExternalIP( ), Slots, 0, m_Map->GetMapLayoutStyle( ), m_Map->GetMapNumPlayers( ) ) );
+                    potential->SetDeleteMe( true );
+                    return;
+                }
+            }
 	}
 
 	if( m_MatchMaking && m_AutoStartPlayers != 0 && !m_Map->GetMapMatchMakingCategory( ).empty( ) && m_Map->GetMapOptions( ) & MAPOPT_FIXEDPLAYERSETTINGS )
@@ -1785,18 +1800,11 @@ void CBaseGame :: EventPlayerJoined( CPotentialPlayer *potential, CIncomingJoinP
 	// check if the player is an admin or root admin on any connected realm for determining reserved status
 	// we can't just use the spoof checked realm like in EventPlayerBotCommand because the player hasn't spoof checked yet
 
-	bool AnyAdminCheck = false;
+	bool AdminCheck = IsAdmin(joinPlayer->GetName( ));
+	bool RootAdminCheck = IsRootAdmin(joinPlayer->GetName( ));
+	bool PremiumCheck = IsPremium(joinPlayer->GetName( ));
 
-	for( vector<CBNET *> :: iterator i = m_GHost->m_BNETs.begin( ); i != m_GHost->m_BNETs.end( ); i++ )
-	{
-		if( (*i)->IsAdmin( joinPlayer->GetName( ) ) || (*i)->IsRootAdmin( joinPlayer->GetName( ) ) )
-		{
-			AnyAdminCheck = true;
-			break;
-		}
-	}
-
-	bool Reserved = IsReserved( joinPlayer->GetName( ) ) || ( m_GHost->m_ReserveAdmins && AnyAdminCheck ) || IsOwner( joinPlayer->GetName( ) );
+	bool Reserved = AdminCheck || RootAdminCheck || PremiumCheck;
 
 	// try to find a slot
 
@@ -1960,7 +1968,8 @@ void CBaseGame :: EventPlayerJoined( CPotentialPlayer *potential, CIncomingJoinP
 
 	if( JoinedRealm.empty( ) )
 		Player->SetSpoofed( true );
-	Player->SetWhoisShouldBeSent( m_GHost->m_SpoofChecks == 1 || ( m_GHost->m_SpoofChecks == 2 && AnyAdminCheck ) );
+        
+	Player->SetWhoisShouldBeSent( m_GHost->m_SpoofChecks == 1 || ( m_GHost->m_SpoofChecks == 2 && Reserved ) );
 	m_Players.push_back( Player );
 	potential->SetSocket( NULL );
 	potential->SetDeleteMe( true );
@@ -2101,6 +2110,20 @@ void CBaseGame :: EventPlayerJoined( CPotentialPlayer *potential, CIncomingJoinP
 		SendAllChat( m_GHost->m_Language->GameLocked( ) );
 		m_Locked = true;
 	}
+        
+        if(Player) {
+            if(Reserved) {
+                if(RootAdminCheck) {
+                    SendAllChat("Root Admin [" + Player->GetName() + "] joined the game.");
+                } else if (AdminCheck) {
+                    SendAllChat("Admin [" + Player->GetName() + "] joined the game.");
+                } else if (PremiumCheck) {
+                    SendAllChat("Premium Member [" + Player->GetName() + "] joined the game.");
+                }
+            } else {
+                SendAllChat("Player [" + Player->GetName() + "] joined the game.");
+            }
+        }
 }
 
 void CBaseGame :: EventPlayerJoinedWithScore( CPotentialPlayer *potential, CIncomingJoinPlayer *joinPlayer, double score )
@@ -4396,6 +4419,7 @@ void CBaseGame :: StartCountDown( bool force )
 
 			if( StillDownloading.empty( ) && NotSpoofChecked.empty( ) && NotPinged.empty( ) )
 			{
+                                ShowTeamScores(NULL);
 				m_CountDownStarted = true;
 				m_CountDownCounter = 5;
 			}
@@ -4488,6 +4512,7 @@ void CBaseGame :: StartCountDownAuto( bool requireSpoofChecks )
 
 		if( StillDownloading.empty( ) && NotSpoofChecked.empty( ) && NotPinged.empty( ) )
 		{
+                        ShowTeamScores( NULL );
 			m_CountDownStarted = true;
 			m_CountDownCounter = 10;
 		}
@@ -4626,4 +4651,212 @@ vector<PlayerOfPlayerList> CBaseGame :: GetPlayerListOfGame( ) {
         n++;
     }
     return m_Players;
+}
+
+bool CBaseGame :: IsRootAdmin( string username )
+{
+    bool IsRootAdmin = false;
+    transform( username.begin( ), username.end( ), username.begin( ), (int(*)(int))tolower );
+    
+    if(m_GHost->m_AdminList.find(username) != m_GHost->m_AdminList.end()) {
+        IsRootAdmin = m_GHost->m_AdminList[username] > 9;
+    }
+    
+    return IsRootAdmin;
+}
+
+bool CBaseGame :: IsAdmin( string username )
+{
+    bool IsAdmin = false;
+    transform( username.begin( ), username.end( ), username.begin( ), (int(*)(int))tolower );
+    
+    if(m_GHost->m_AdminList.find(username) != m_GHost->m_AdminList.end()) {
+        IsAdmin = m_GHost->m_AdminList[username] > 4;
+    }
+    
+    return IsAdmin;
+}
+
+bool CBaseGame :: IsPremium( string username )
+{
+    bool IsPremium = false;
+    transform( username.begin( ), username.end( ), username.begin( ), (int(*)(int))tolower );
+    
+    if(m_GHost->m_AdminList.find(username) != m_GHost->m_AdminList.end()) {
+        IsPremium = m_GHost->m_AdminList[username] > 2;
+    }
+    
+    return IsPremium;
+}
+void CBaseGame :: ShowTeamScores( CGamePlayer *player )
+{
+	vector<double> Team1;
+	double Team1Total = 0;
+	vector<double> Team2;
+	double Team2Total = 0;
+
+	for( unsigned char i = 0; i < m_Slots.size( ); ++i )
+	{
+		CGamePlayer *Player = GetPlayerFromSID( i );
+
+		if( Player )
+		{
+			double Score = Player->GetScore( );
+
+			if( Score < -99999.0 )
+			{
+				if( m_Map )
+					Score = m_Map->GetMapDefaultPlayerScore( );
+				else
+					Score = 1000;
+			}
+
+			if( m_Slots[i].GetTeam( ) == 0 )
+			{
+				Team1.push_back( Score );
+				Team1Total += Score;
+			}
+			else if( m_Slots[i].GetTeam( ) == 1 )
+			{
+				Team2.push_back( Score );
+				Team2Total += Score;
+			}
+		}
+	}
+
+	if( !Team1.empty( ) && !Team2.empty( ) )
+	{
+		string Team1String = "Sentinel/West";
+		string Team2String = "Scourge/East";
+
+		for( int i = 0; i < Team1.size( ); i++ )
+		{
+			Team1String += " " + UTIL_ToString( Team1[i], 2 );
+		}
+
+		for( int i = 0; i < Team2.size( ); i++ )
+		{
+			Team2String += " " + UTIL_ToString( Team2[i], 2 );
+		}
+
+		Team1String += " Avg: " + UTIL_ToString( Team1Total / Team1.size( ), 2 );
+		Team2String += " Avg: " + UTIL_ToString( Team2Total / Team2.size( ), 2 );
+
+		//stuff for ELO calculation
+		int eloNumPlayers = Team1.size( ) + Team2.size( );
+		float *eloPlayerRatings = new float[eloNumPlayers];
+		int *eloPlayerTeams = new int[eloNumPlayers];
+		int eloNumTeams = 2;
+		float *eloTeamRatings = new float[2];
+		float *eloTeamWinners = new float[2];
+
+		eloTeamRatings[0] = Team1Total / Team1.size( );
+		eloTeamRatings[1] = Team2Total / Team2.size( );
+		string eloChangeString = "ELO change: ";
+
+		//repeat twice
+		//in first case, we get ELO difference if team 1 wins, and in second case, we get if team 2 wins
+		for( int k = 0; k < 2; ++k )
+		{
+			for( int i = 0; i < Team1.size( ); ++i )
+			{
+				eloPlayerRatings[i] = Team1[i];
+				eloPlayerTeams[i] = 0;
+			}
+
+			for(int i = 0; i < Team2.size( ); ++i )
+			{
+				eloPlayerRatings[Team1.size( ) + i] = Team2[i];
+				eloPlayerTeams[Team1.size( ) + i] = 1;
+			}
+
+			if( k == 0 )
+			{
+				eloTeamWinners[0] = 1;
+				eloTeamWinners[1] = 0;
+			}
+			else
+			{
+				eloTeamWinners[0] = 0;
+				eloTeamWinners[1] = 1;
+			}
+
+			elo_recalculate_ratings(eloNumPlayers, eloPlayerRatings, eloPlayerTeams, eloNumTeams, eloTeamRatings, eloTeamWinners);
+
+			if( k == 0 )
+				eloChangeString += UTIL_ToString( eloPlayerRatings[0] - Team1[0], 2 ) + " / ";
+			else
+				eloChangeString += UTIL_ToString( eloPlayerRatings[Team1.size( )] - Team2[0], 2 );
+		}
+
+		delete eloPlayerRatings;
+		delete eloPlayerTeams;
+		delete eloTeamRatings;
+		delete eloTeamWinners;
+
+		if( player )
+		{
+			SendChat( player, Team1String );
+			SendChat( player, Team2String );
+			SendChat( player, eloChangeString );
+		}
+		else
+		{
+			SendAllChat( Team1String );
+			SendAllChat( Team2String );
+			SendAllChat( eloChangeString );
+                        m_EloChange = eloChangeString;
+		}
+	}
+	else
+	{
+		SendAllChat( "Error in showing team scores: there must be at least one player on each team!" );
+	}
+}
+
+
+
+CDBBan *CBaseGame :: IsBannedName( string name )
+{
+    transform( name.begin( ), name.end( ), name.begin( ), ::tolower );
+
+    for( vector<CDBBan *> :: iterator i = m_GHost->m_BanList.begin( ); i != m_GHost->m_BanList.end( ); ++i )
+    {
+        string bannedName = (*i)->GetName( );
+        transform( bannedName.begin( ), bannedName.end( ), bannedName.begin( ), ::tolower );
+        if( bannedName == name )
+            return *i;
+    }
+
+    return NULL;
+}
+
+CDBBan *CBaseGame :: IsBannedIP( string ip )
+{
+    transform( ip.begin( ), ip.end( ), ip.begin( ), ::tolower ); //transform in case it's a hostname
+    for( vector<CDBBan *> :: iterator i = m_GHost->m_BanList.begin( ); i != m_GHost->m_BanList.end( ); ++i )
+    {
+        if( (*i)->GetIP( )[0] == ':' )
+        {
+            string BanIP = (*i)->GetIP( ).substr( 1 );
+            size_t len = BanIP.length( );
+
+            if( ip.length( ) >= len && ip.substr( 0, len ) == BanIP )
+            {
+                return *i;
+            }
+            else if( BanIP.length( ) >= 3 && BanIP[0] == 'h' && ip.length( ) >= 3 && ip[0] == 'h' && ip.substr( 1 ).find( BanIP.substr( 1 ) ) != string::npos )
+            {
+
+                return *i;
+            }
+        }
+
+        if( (*i)->GetIP( ) == ip )
+        {
+            return *i;
+        }
+    }
+
+    return NULL;
 }

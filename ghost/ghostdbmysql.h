@@ -62,7 +62,7 @@ public:
 	virtual CCallableBanRemove *ThreadedBanRemove( string server, string user );
 	virtual CCallableBanRemove *ThreadedBanRemove( string user );
 	virtual CCallableBanList *ThreadedBanList( string server );
-	virtual CCallableGameAdd *ThreadedGameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid );
+	virtual CCallableGameAdd *ThreadedGameAdd( string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid, vector<string> lobbylog, vector<string> gamelog, string elochange );
 	virtual CCallableGamePlayerAdd *ThreadedGamePlayerAdd( uint32_t gameid, string name, string ip, uint32_t spoofed, string spoofedrealm, uint32_t reserved, uint32_t loadingtime, uint32_t left, string leftreason, uint32_t team, uint32_t colour, uint32_t playerid );
 	virtual CCallableGamePlayerSummaryCheck *ThreadedGamePlayerSummaryCheck( string name );
 	virtual CCallableDotAGameAdd *ThreadedDotAGameAdd( uint32_t gameid, uint32_t winner, uint32_t min, uint32_t sec );
@@ -78,15 +78,16 @@ public:
 	// other database functions
 	virtual CCallableGetPlayerId *ThreadedGetPlayerId( string user );
 	virtual CCallableCreatePlayerId *ThreadedCreatePlayerId( string user, string ip, string realm );
-    virtual CCallableGetGameId *ThreadedGetGameId( );
-    virtual CCallableGetBotConfigs *ThreadedGetBotConfigs( );
-    virtual CCallableGetBotConfigTexts *ThreadedGetBotConfigTexts( );
-    virtual CCallableGetLanguages *ThreadedGetLanguages( );
-    virtual CCallableGetMapConfig *ThreadedGetMapConfig( string configname );
-    virtual CCallableGameUpdate *ThreadedGameUpdate( uint32_t hostcounter, uint32_t lobby, string map_type, uint32_t duration, string gamename, string ownername, string creatorname, string map, uint32_t players, uint32_t total, vector<PlayerOfPlayerList> playerlist );
-    virtual CCallableGetAliases *ThreadedGetAliases( );
-    virtual CCallableGetStatsTemplates *ThreadedGetStatsTemplates( );
-    virtual CCallableGetPlayerStats *ThreadedGetPlayerStats( uint32_t aliasid, uint32_t playerid );  
+        virtual CCallableGetGameId *ThreadedGetGameId( );
+        virtual CCallableGetBotConfigs *ThreadedGetBotConfigs( );
+        virtual CCallableGetBotConfigTexts *ThreadedGetBotConfigTexts( );
+        virtual CCallableGetLanguages *ThreadedGetLanguages( );
+        virtual CCallableGetMapConfig *ThreadedGetMapConfig( string configname );
+        virtual CCallableGameUpdate *ThreadedGameUpdate( uint32_t hostcounter, uint32_t lobby, string map_type, uint32_t duration, string gamename, string ownername, string creatorname, string map, uint32_t players, uint32_t total, vector<PlayerOfPlayerList> playerlist );
+        virtual CCallableGetAliases *ThreadedGetAliases( );
+        virtual CCallableGetStatsTemplates *ThreadedGetStatsTemplates( );
+        virtual CCallableGetPlayerStats *ThreadedGetPlayerStats( uint32_t aliasid, uint32_t playerid ); 
+        virtual CCallableGetPlayerScore *ThreadedGetPlayerScore( uint32_t aliasid, uint32_t playerid );   
  
 	virtual void *GetIdleConnection( );
 };
@@ -106,7 +107,7 @@ bool MySQLBanAdd( void *conn, string *error, uint32_t botid, string server, stri
 bool MySQLBanRemove( void *conn, string *error, uint32_t botid, string server, string user );
 bool MySQLBanRemove( void *conn, string *error, uint32_t botid, string user );
 vector<CDBBan *> MySQLBanList( void *conn, string *error, uint32_t botid, string server );
-uint32_t MySQLGameAdd( void *conn, string *error, uint32_t botid, string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid );
+uint32_t MySQLGameAdd( void *conn, string *error, uint32_t botid, string server, string map, string gamename, string ownername, uint32_t duration, uint32_t gamestate, string creatorname, string creatorserver, uint32_t gameid, uint32_t aliasid, vector<string> lobbylog, vector<string> gamelog, string elochange );
 uint32_t MySQLGamePlayerAdd( void *conn, string *error, uint32_t botid, uint32_t gameid, string name, string ip, uint32_t spoofed, string spoofedrealm, uint32_t reserved, uint32_t loadingtime, uint32_t left, string leftreason, uint32_t team, uint32_t colour, uint32_t playerid );
 CDBGamePlayerSummary *MySQLGamePlayerSummaryCheck( void *conn, string *error, uint32_t botid, string name );
 uint32_t MySQLDotAGameAdd( void *conn, string *error, uint32_t botid, uint32_t gameid, uint32_t winner, uint32_t min, uint32_t sec );
@@ -129,6 +130,7 @@ string MySQLGameUpdate( void *conn, string *error, uint32_t botid, uint32_t host
 map<uint32_t, string> MySQLGetAliases( void *conn, string *error, uint32_t botid );
 map<uint32_t, string> MySQLGetStatsTemplates( void *conn, string *error, uint32_t botid );
 map<string, string> MySQLGetPlayerStats( void *conn, string *error, uint32_t botid, uint32_t aliasid, uint32_t playerid );
+double MySQLGetPlayerScore( void *conn, string *error, uint32_t botid, uint32_t aliasid, uint32_t playerid );
 
 
 //
@@ -269,7 +271,7 @@ public:
 class CMySQLCallableGameAdd : public CCallableGameAdd, public CMySQLCallable
 {
 public:
-	CMySQLCallableGameAdd( string nServer, string nMap, string nGameName, string nOwnerName, uint32_t nDuration, uint32_t nGameState, string nCreatorName, string nCreatorServer, uint32_t nGameId, uint32_t nAliasId, void *nConnection, uint32_t nSQLBotID, string nSQLServer, string nSQLDatabase, string nSQLUser, string nSQLPassword, uint16_t nSQLPort ) : CBaseCallable( ), CCallableGameAdd( nServer, nMap, nGameName, nOwnerName, nDuration, nGameState, nCreatorName, nCreatorServer, nGameId, nAliasId ), CMySQLCallable( nConnection, nSQLBotID, nSQLServer, nSQLDatabase, nSQLUser, nSQLPassword, nSQLPort ) { }
+	CMySQLCallableGameAdd( string nServer, string nMap, string nGameName, string nOwnerName, uint32_t nDuration, uint32_t nGameState, string nCreatorName, string nCreatorServer, uint32_t nGameId, uint32_t nAliasId, vector<string> nLobbyLog, vector<string> nGameLog, string nEloChange, void *nConnection, uint32_t nSQLBotID, string nSQLServer, string nSQLDatabase, string nSQLUser, string nSQLPassword, uint16_t nSQLPort ) : CBaseCallable( ), CCallableGameAdd( nServer, nMap, nGameName, nOwnerName, nDuration, nGameState, nCreatorName, nCreatorServer, nGameId, nAliasId, nLobbyLog, nGameLog, nEloChange ), CMySQLCallable( nConnection, nSQLBotID, nSQLServer, nSQLDatabase, nSQLUser, nSQLPassword, nSQLPort ) { }
 	virtual ~CMySQLCallableGameAdd( ) { }
 
 	virtual void operator( )( );
@@ -493,6 +495,15 @@ public:
         virtual void Close( ) { CMySQLCallable :: Close( ); }
 };
 
+class CMySQLCallableGetPlayerScore : public CCallableGetPlayerScore, public CMySQLCallable
+{
+public:
+        CMySQLCallableGetPlayerScore( uint32_t nAliasId, uint32_t nPlayerId, void *nConnection, uint32_t nSQLBotID, string nSQLServer, string nSQLDatabase, string nSQLUser, string nSQLPassword, uint16_t nSQLPort ) : CBaseCallable( ), CCallableGetPlayerScore( nAliasId, nPlayerId ), CMySQLCallable( nConnection, nSQLBotID, nSQLServer, nSQLDatabase, nSQLUser, nSQLPassword, nSQLPort ) { }
+
+        virtual void operator( )( );
+        virtual void Init( ) { CMySQLCallable :: Init( ); }
+        virtual void Close( ) { CMySQLCallable :: Close( ); }
+};
 #endif
 
 #endif
