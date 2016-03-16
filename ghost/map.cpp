@@ -297,16 +297,16 @@ void CMap :: Load( map<string, string> config )
 		// calculate map_crc (this is not the CRC) and map_sha1
 		// a big thank you to Strilanc for figuring the map_crc algorithm out
 
-		string CommonJ = UTIL_FileRead( m_GHost->m_MapPath + "/common.j" );
+		string CommonJ = UTIL_FileRead( m_GHost->m_MapPath + "common.j" );
 
 		if( CommonJ.empty( ) )
-			CONSOLE_Print( "[MAP] unable to calculate map_crc/sha1 - unable to read file [" + m_GHost->m_MapPath + "/common.j]" );
+			CONSOLE_Print( "[MAP] unable to calculate map_crc/sha1 - unable to read file [" + m_GHost->m_MapPath + "common.j]" );
 		else
 		{
-			string BlizzardJ = UTIL_FileRead( m_GHost->m_MapPath + "/blizzard.j" );
+			string BlizzardJ = UTIL_FileRead( m_GHost->m_MapPath + "blizzard.j" );
 
 			if( BlizzardJ.empty( ) )
-				CONSOLE_Print( "[MAP] unable to calculate map_crc/sha1 - unable to read file [" + m_GHost->m_MapPath + "/blizzard.j]" );
+				CONSOLE_Print( "[MAP] unable to calculate map_crc/sha1 - unable to read file [" + m_GHost->m_MapPath + "blizzard.j]" );
 			else
 			{
 				uint32_t Val = 0;

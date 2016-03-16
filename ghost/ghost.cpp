@@ -465,7 +465,6 @@ CGHost :: CGHost( CConfig *CFG )
 	// we're just loading the config data and creating the CBNET classes here, the connections are established later (in the Update function)
 
         m_Warcraft3Path = UTIL_AddPathSeperator( CFG->GetString( "bot_war3path", "C:\\Program Files\\Warcraft III\\" ) );
-	ExtractScripts( );
 
 	CONSOLE_Print( "[GHOST] GHost++ Version " + m_Version + " (with MySQL support)" );
 }
@@ -1126,8 +1125,8 @@ void CGHost :: ExtractScripts( )
 
 				if( SFileReadFile( SubFile, SubFileData, FileLength, &BytesRead ) )
 				{
-					CONSOLE_Print( "[GHOST] extracting Scripts\\common.j from MPQ file to [" + m_MapCFGPath + "common.j]" );
-					UTIL_FileWrite( m_MapCFGPath + "common.j", (unsigned char *)SubFileData, BytesRead );
+					CONSOLE_Print( "[GHOST] extracting Scripts\\common.j from MPQ file to [" + m_MapPath + "common.j]" );
+					UTIL_FileWrite( m_MapPath + "common.j", (unsigned char *)SubFileData, BytesRead );
 				}
 				else
 					CONSOLE_Print( "[GHOST] warning - unable to extract Scripts\\common.j from MPQ file" );
@@ -1153,8 +1152,8 @@ void CGHost :: ExtractScripts( )
 
 				if( SFileReadFile( SubFile, SubFileData, FileLength, &BytesRead ) )
 				{
-					CONSOLE_Print( "[GHOST] extracting Scripts\\blizzard.j from MPQ file to [" + m_MapCFGPath + "blizzard.j]" );
-					UTIL_FileWrite( m_MapCFGPath + "blizzard.j", (unsigned char *)SubFileData, BytesRead );
+					CONSOLE_Print( "[GHOST] extracting Scripts\\blizzard.j from MPQ file to [" + m_MapPath + "blizzard.j]" );
+					UTIL_FileWrite( m_MapPath + "blizzard.j", (unsigned char *)SubFileData, BytesRead );
 				}
 				else
 					CONSOLE_Print( "[GHOST] warning - unable to extract Scripts\\blizzard.j from MPQ file" );
@@ -1445,6 +1444,7 @@ void CGHost :: ParseConfigValues( map<string, string> configs )
         }
     }
     
+    ExtractScripts( );
     ConnectToBNets();
     
     if(! m_CurrentGame) {
