@@ -154,6 +154,7 @@ public:
         map<uint32_t, string> m_StatsTemplates;
         vector<CDBBan *> m_BanList;
         uint32_t m_LastListRefresh;
+	string m_AutoHostSplitter;
 
 	CGHost( CConfig *CFG );
 	~CGHost( );

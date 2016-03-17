@@ -372,7 +372,7 @@ CGHost :: CGHost( CConfig *CFG )
 	CONSOLE_Print( "[GHOST] opening primary database" );
 	m_LANWar3Version = 27;
 	m_ReplayWar3Version = 27;
-
+	m_AutoHostSplitter = "#";
 
         m_DB = new CGHostDBMySQL( CFG );
 
@@ -856,7 +856,7 @@ bool CGHost :: Update( long usecBlock )
 		{
 			if( m_AutoHostMap->GetValid( ) )
 			{
-				string GameName = m_AutoHostGameName + " * " + UTIL_ToString( m_NewGameId % 100 );
+				string GameName = m_AutoHostGameName + " " + m_AutoHostSplitter + UTIL_ToString( m_NewGameId % 100 );
 
 				if( GameName.size( ) <= 31 )
 				{
@@ -1439,6 +1439,8 @@ void CGHost :: ParseConfigValues( map<string, string> configs )
             m_BNetCollection[bnetNumber][iterator->first.substr(pos)] = iterator->second;
         } else if(iterator->first == "ohs_alias_id") {
             m_AliasId = UTIL_ToUInt32(iterator->second);
+	} else if(iterator->first == "autohost_symbol") {
+	    m_AutoHostSplitter = iterator->second;
         } else {
             CONSOLE_Print("Unused!! " + iterator->first + " of value " + iterator->second);
         }
