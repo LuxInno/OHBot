@@ -1342,8 +1342,6 @@ uint32_t MySQLCreatePlayerId( void *conn, string *error, uint32_t botid, string 
     else
         RowID = mysql_insert_id( (MYSQL *)conn );
     
-    CONSOLE_Print(Query + " WITH ID " + UTIL_ToString(RowID));
-
     return RowID;
 }
 

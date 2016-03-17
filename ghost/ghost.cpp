@@ -920,7 +920,7 @@ bool CGHost :: Update( long usecBlock )
     if( m_NewGameId == 0 && m_LastGameIdUpdate != 0 && GetTime( ) - m_LastGameIdUpdate >= 5 )
     {
         m_CallableGetGameId = m_DB->ThreadedGetGameId( );
-        m_LastGameIdUpdate = 0;
+        m_LastGameIdUpdate = GetTime();
     }
 
     if( m_CallableGetGameId && m_CallableGetGameId->GetReady( ) )
