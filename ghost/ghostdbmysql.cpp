@@ -945,6 +945,26 @@ uint32_t MySQLGameAdd( void *conn, string *error, uint32_t botid, string server,
 	if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
 		*error = mysql_error( (MYSQL *)conn );
 
+        string LobbyLog;
+        for( vector<string> :: iterator i = lobbylog.begin( ); i != lobbylog.end( ); i++ )
+            LobbyLog.append( (*i) + '\n' );
+
+        string EscLobbyLog = MySQLEscapeString( conn, LobbyLog );
+
+        string GameLog;
+        for( vector<string> :: iterator i = gamelog.begin( ); i != gamelog.end( ); i++ )
+            GameLog.append( (*i) + '\n' );
+
+        string EscGameLog = MySQLEscapeString( conn, GameLog );
+
+        string InsertQ = "INSERT INTO oh_lobby_game_logs ( gameid, botid, lobbylog, gamelog ) VALUES ( "+UTIL_ToString(gameid)+", "+UTIL_ToString(botid)+", '"+EscLobbyLog+"', '"+EscGameLog+"' )";
+
+        if( mysql_real_query( (MYSQL *)conn, InsertQ.c_str( ), InsertQ.size( ) ) != 0 )
+            *error = mysql_error( (MYSQL *)conn );
+
+        lobbylog.clear( );
+        gamelog.clear( );
+        
 	return gameid;
 }
 

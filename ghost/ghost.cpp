@@ -370,8 +370,8 @@ CGHost :: CGHost( CConfig *CFG )
         m_NewGameId = 0;
         m_LastGameIdUpdate = GetTime( );
 	CONSOLE_Print( "[GHOST] opening primary database" );
-	m_LANWar3Version = 27;
-	m_ReplayWar3Version = 27;
+	m_LANWar3Version = 26;
+	m_ReplayWar3Version = 26;
 	m_AutoHostSplitter = "#";
 
         m_DB = new CGHostDBMySQL( CFG );
@@ -1494,7 +1494,7 @@ void CGHost :: ConnectToBNets( )
 	bool HoldFriends = false;
 	bool HoldClan = false;
 	bool PublicCommands = false;
-	unsigned char War3Version = 27;
+	unsigned char War3Version = 26;
 	BYTEARRAY EXEVersion = {};
 	BYTEARRAY EXEVersionHash = {};
 	string PasswordHashType = "";

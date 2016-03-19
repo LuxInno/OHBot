@@ -1251,20 +1251,22 @@ void CBaseGame :: SendAllChat( unsigned char fromPID, string message )
 
 		if( !m_GameLoading && !m_GameLoaded )
 		{
-			if( message.size( ) > 254 )
-				message = message.substr( 0, 254 );
+                    if( message.size( ) > 254 )
+                        message = message.substr( 0, 254 );
 
-			SendAll( m_Protocol->SEND_W3GS_CHAT_FROM_HOST( fromPID, GetPIDs( ), 16, BYTEARRAY( ), message ) );
+                    SendAll( m_Protocol->SEND_W3GS_CHAT_FROM_HOST( fromPID, GetPIDs( ), 16, BYTEARRAY( ), message ) );
+                    m_LobbyLog.push_back(message);
 		}
 		else
 		{
-			if( message.size( ) > 127 )
-				message = message.substr( 0, 127 );
+                    if( message.size( ) > 127 )
+                            message = message.substr( 0, 127 );
 
-			SendAll( m_Protocol->SEND_W3GS_CHAT_FROM_HOST( fromPID, GetPIDs( ), 32, UTIL_CreateByteArray( (uint32_t)0, false ), message ) );
+                    SendAll( m_Protocol->SEND_W3GS_CHAT_FROM_HOST( fromPID, GetPIDs( ), 32, UTIL_CreateByteArray( (uint32_t)0, false ), message ) );
+                    m_GameLog.push_back(message);
 
-			if( m_Replay )
-				m_Replay->AddChatMessage( fromPID, 32, 0, message );
+                    if( m_Replay )
+                            m_Replay->AddChatMessage( fromPID, 32, 0, message );
 		}
 	}
 }
@@ -4709,10 +4711,7 @@ void CBaseGame :: ShowTeamScores( CGamePlayer *player )
 
 			if( Score < -99999.0 )
 			{
-				if( m_Map )
-					Score = m_Map->GetMapDefaultPlayerScore( );
-				else
-					Score = 1000;
+				Score = 1000;
 			}
 
 			if( m_Slots[i].GetTeam( ) == 0 )
