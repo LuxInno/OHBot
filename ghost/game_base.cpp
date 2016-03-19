@@ -51,13 +51,13 @@ CBaseGame :: CBaseGame( CGHost *nGHost, CMap *nMap, CSaveGame *nSaveGame, uint16
 	m_Protocol = new CGameProtocol( m_GHost );
 	m_Map = new CMap( *nMap );
 	m_SaveGame = nSaveGame;
-    m_GameId = nGameId;
+        m_GameId = nGameId;
 
 	if( m_GHost->m_SaveReplays && !m_SaveGame )
 		m_Replay = new CReplay( );
 	else
 		m_Replay = NULL;
-
+        
 	m_Exiting = false;
 	m_Saving = false;
 	m_HostPort = nHostPort;
@@ -133,7 +133,7 @@ CBaseGame :: CBaseGame( CGHost *nGHost, CMap *nMap, CSaveGame *nSaveGame, uint16
 	m_Lagging = false;
 	m_AutoSave = m_GHost->m_AutoSave;
 	m_MatchMaking = false;
-    m_LastGameUpdateTime = GetTime();
+        m_LastGameUpdateTime = GetTime();
 
 	if( m_SaveGame )
 	{
@@ -212,6 +212,17 @@ CBaseGame :: CBaseGame( CGHost *nGHost, CMap *nMap, CSaveGame *nSaveGame, uint16
 		CONSOLE_Print( "[GAME: " + m_GameName + "] error listening on port " + UTIL_ToString( m_HostPort ) );
 		m_Exiting = true;
 	}
+        
+        map<string, string> gamedata;
+        gamedata["gameid"] = UTIL_ToString(m_GameId);
+        gamedata["alias"] = UTIL_ToString(m_GHost->m_AliasId);
+        gamedata["gamename"] = m_GameName;
+        gamedata["takenslots"] = UTIL_ToString(m_Players.size( ));
+        gamedata["totalslots"] = UTIL_ToString(m_StartPlayers);
+        gamedata["hostname"] = m_VirtualHostName;
+        
+        m_GHost->SendWSEvent(0, gamedata);
+        gamedata.clear();
 }
 
 CBaseGame :: ~CBaseGame( )

@@ -36,6 +36,7 @@
 #include "gpsprotocol.h"
 #include "game_base.h"
 #include "game.h"
+#include "easywsclient.hpp"
 
 #include <signal.h>
 #include <stdlib.h>
@@ -67,6 +68,7 @@ string gLogFile;
 uint32_t gLogMethod;
 ofstream *gLog = NULL;
 CGHost *gGHost = NULL;
+static WebSocket::pointer WS = NULL;
 
 uint32_t GetTime( )
 {
@@ -383,7 +385,6 @@ CGHost :: CGHost( CConfig *CFG )
         m_CallableGetAliases = m_DB->ThreadedGetAliases( );
         m_CallableGetStatsTemplates = m_DB->ThreadedGetStatsTemplates( );
         m_CallableBanList = m_DB->ThreadedBanList( "" );
-        
         m_LastListRefresh = GetTime();
 
 	// get a list of local IP addresses
@@ -502,6 +503,11 @@ CGHost :: ~CGHost( )
 	delete m_Map;
 	delete m_AutoHostMap;
 	delete m_SaveGame;
+
+        if(WS) {
+            WS->close();
+        }
+        delete WS;
 }
 
 bool CGHost :: Update( long usecBlock )
@@ -1014,6 +1020,11 @@ bool CGHost :: Update( long usecBlock )
         m_CallableBanList = NULL;
     }
         
+    if(WS && WS->getReadyState( ) != WebSocket::CLOSED) {
+      WS->poll();
+      WS->dispatch(CGHost::HandleWSEvent);  
+    }
+        
     return m_Exiting || AdminExit || BNETExit;
 }
 
@@ -1441,16 +1452,25 @@ void CGHost :: ParseConfigValues( map<string, string> configs )
             m_AliasId = UTIL_ToUInt32(iterator->second);
 	} else if(iterator->first == "autohost_symbol") {
 	    m_AutoHostSplitter = iterator->second;
+        } else if(iterator->first == "ws_ip") {
+	    m_WSIp = iterator->second;
+        } else if(iterator->first == "ws_port") {
+	    m_WSPort = iterator->second;
+        } else if(iterator->first == "ws_protocol") {
+	    m_WSProtocol = iterator->second;
         } else {
             CONSOLE_Print("Unused!! " + iterator->first + " of value " + iterator->second);
         }
     }
-    
     ExtractScripts( );
     ConnectToBNets();
     
     if(! m_CurrentGame) {
         m_CallableGetMapConfig = m_DB->ThreadedGetMapConfig( m_DefaultMap );
+    }
+    
+    if(m_WSIp.length() > 0) {
+        WS = WebSocket::from_url("ws://"+m_WSIp+":"+m_WSPort+"/"+m_WSProtocol);
     }
 }
 
@@ -1589,4 +1609,28 @@ void CGHost :: ConnectToBNets( )
         counter++;
     }
     
+}
+/**
+ * # 0 - Game Started, data gameid, alias, gamename, availableslots, totalslots
+ */
+void CGHost :: SendWSEvent( uint32_t event, map<string, string> data) {
+    if(WS) {
+        string dataString = "{";
+
+        dataString += "\"event\": \""+UTIL_ToString(event)+"\"";
+
+        typedef map<string, string>::iterator data_iterator;
+        for(data_iterator i = data.begin(); i != data.end(); i++) {
+            dataString += ", \"" + i->first + "\":\"" + i->second + "\"";
+        }
+
+        dataString += "}";
+        WS->send(dataString);
+    }
+}
+
+void CGHost :: HandleWSEvent(string message) {
+    if(message == "hello") {
+        WS->send("Fuck off!");
+    }
 }

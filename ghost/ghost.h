@@ -21,11 +21,12 @@
 #ifndef GHOST_H
 #define GHOST_H
 
-#include "includes.h"
+#include "includes.h"//
+#include "easywsclient.hpp"
 
 //
 // CGHost
-//
+
 
 class CUDPSocket;
 class CTCPServer;
@@ -51,6 +52,7 @@ class CCallableAdminList;
 class CCallableGetAliases;
 class CCallableGetStatsTemplates;
 class CDBBan;
+using easywsclient::WebSocket;
 
 class CGHost
 {
@@ -155,6 +157,9 @@ public:
         vector<CDBBan *> m_BanList;
         uint32_t m_LastListRefresh;
 	string m_AutoHostSplitter;
+        string m_WSIp;
+        string m_WSPort;
+        string m_WSProtocol;
 
 	CGHost( CConfig *CFG );
 	~CGHost( );
@@ -180,14 +185,17 @@ public:
 	// other functions
 
 	void ExtractScripts( );
-    void ReloadConfigs( );
+        void ReloadConfigs( );
 	void CreateGame( CMap *map, unsigned char gameState, bool saveGame, string gameName, string ownerName, string creatorName, string creatorServer, bool whisper );
     
-    // configs
-    
-    void ParseConfigValues( map<string, string> configs );
-    void ParseConfigTexts( map<string, vector<string>> texts );
-    void ConnectToBNets( );
+        // configs
+
+        void ParseConfigValues( map<string, string> configs );
+        void ParseConfigTexts( map<string, vector<string>> texts );
+        void ConnectToBNets( );
+        
+        void SendWSEvent( uint32_t event, map<string, string> data);
+        void static HandleWSEvent(string message);
 };
 
 #endif
