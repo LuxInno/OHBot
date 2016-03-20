@@ -1444,6 +1444,48 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
             }
 	}
 
+        
+        //
+        // !VOTESTART
+        //
+
+        if( ( Command == "votestart" || Command == "vs" ) && !m_CountDownStarted && m_GHost->m_AllowVoteStart )
+        {
+
+            if( !m_GHost->m_CurrentGame->GetLocked( ) )
+            {
+                if (GetNumHumanPlayers() < m_GHost->m_VoteStartMinPlayers ) { //need at least eight players to votestart
+                    SendChat( player, "To less players in the lobby to votestart. There at least [" + UTIL_ToString(m_GHost->m_VoteStartMinPlayers) + "] required." );
+                    return false;
+                }
+
+                player->SetVotedToStart( );
+
+                uint32_t VotesNeeded = GetNumHumanPlayers( ) - 1;
+
+                if( VotesNeeded < 2 )
+                    VotesNeeded = 2;
+
+                uint32_t Votes = 0;
+
+                for( vector<CGamePlayer *> :: iterator i = m_Players.begin( ); i != m_Players.end( ); ++i )
+                {
+                    if( (*i)->HasVotedToStart( ) )
+                        ++Votes;
+                }
+
+                if(Votes < VotesNeeded) {
+                    SendAllChat( "Missing [" + UTIL_ToString(VotesNeeded - Votes) +"] more votes to start the game." );
+                } else {
+                    SendAllChat( "Votestarted the game" );
+                    StartCountDown( true );
+                }
+            }
+            else {
+                SendChat( player, "Unable to votestart the game, the owner is in the game." );
+            }
+        }
+        
 	return HideCommand;
 }
 

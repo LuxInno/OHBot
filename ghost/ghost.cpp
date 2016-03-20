@@ -1441,6 +1441,10 @@ void CGHost :: ParseConfigValues( map<string, string> configs )
             m_AliasId = UTIL_ToUInt32(iterator->second);
         } else if(iterator->first == "ohs_banlast_time") {
             m_BanLastTime = UTIL_ToUInt32(iterator->second);
+	} else if(iterator->first == "ohs_votestart") {
+            m_AllowVoteStart = UTIL_ToUInt32(iterator->second) == 0 ? false : true;
+	} else if(iterator->first == "ohs_votestart_minplayers") {
+            m_VoteStartMinPlayers = UTIL_ToUInt32(iterator->second);
 	} else if(iterator->first == "autohost_symbol") {
 	    m_AutoHostSplitter = iterator->second;
         } else {
