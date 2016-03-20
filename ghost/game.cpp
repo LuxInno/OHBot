@@ -1483,7 +1483,7 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
 
             if( !m_GHost->m_CurrentGame->GetLocked( ) )
             {
-                if (GetNumHumanPlayers() < m_GHost->m_VoteStartMinPlayers ) { //need at least eight players to votestart
+                if (GetNumHumanPlayers() < m_GHost->m_VoteStartMinPlayers ) {
                     SendChat( player, "To less players in the lobby to votestart. There at least [" + UTIL_ToString(m_GHost->m_VoteStartMinPlayers) + "] required." );
                     return false;
                 }
