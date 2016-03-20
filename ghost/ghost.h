@@ -156,6 +156,8 @@ public:
         uint32_t m_LastListRefresh;
 	string m_AutoHostSplitter;
         uint32_t m_BanLastTime;
+        bool m_AllowVoteStart;
+        uint32_t m_VoteStartMinPlayers;
 
 	CGHost( CConfig *CFG );
 	~CGHost( );
