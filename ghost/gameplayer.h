@@ -129,6 +129,7 @@ private:
         uint32_t m_PlayerId;
         uint32_t m_LeftTime;
         bool m_HasVotedToStart;
+        bool m_HasVotedToDraw;
 
 public:
 	CGamePlayer( CGameProtocol *nProtocol, CBaseGame *nGame, CTCPSocket *nSocket, unsigned char nPID, string nJoinedRealm, string nName, BYTEARRAY nInternalIP, bool nReserved );
@@ -179,6 +180,7 @@ public:
         uint32_t GetPlayerId( )                     { return m_PlayerId; }
         uint32_t GetLeftTime( )                     { return m_LeftTime; }
         bool HasVotedToStart( )                     { return m_HasVotedToStart; }
+        bool HasVotedToDraw( )                     { return m_HasVotedToDraw; }
         
 	void SetLeftReason( string nLeftReason )										{ m_LeftReason = nLeftReason; }
 	void SetSpoofedRealm( string nSpoofedRealm )									{ m_SpoofedRealm = nSpoofedRealm; }
@@ -210,6 +212,7 @@ public:
         void SetPlayerId( uint32_t nPLayerId )                                          { m_PlayerId = nPLayerId; }
         void SetLeftTime( uint32_t nLeftTime )                                          { m_LeftTime = nLeftTime; }
         void SetVotedToStart( )                                                         { m_HasVotedToStart = true; }
+        void SetDrawVote( bool nDrawVote )                                                         { m_HasVotedToStart = nDrawVote; }
         
 	string GetNameTerminated( );
 	uint32_t GetPing( bool LCPing );

@@ -1454,7 +1454,7 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
 
             if( !m_GHost->m_CurrentGame->GetLocked( ) )
             {
-                if (GetNumHumanPlayers() < m_GHost->m_VoteStartMinPlayers ) { //need at least eight players to votestart
+                if (GetNumHumanPlayers() < m_GHost->m_VoteStartMinPlayers ) {
                     SendChat( player, "To less players in the lobby to votestart. There at least [" + UTIL_ToString(m_GHost->m_VoteStartMinPlayers) + "] required." );
                     return false;
                 }
@@ -1484,6 +1484,56 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
             else {
                 SendChat( player, "Unable to votestart the game, the owner is in the game." );
             }
+        }
+        
+        
+        //
+        // !DRAW
+        //
+        if( m_GameLoaded && ( Command == "draw" || Command == "undraw" ) )
+        {
+            unsigned char SID = GetSIDFromPID( player->GetPID( ) );
+            if(SID!=11)
+            {
+                if( Command == "draw" )
+                {
+                    bool ChangedVote = true;
+
+                    if( !player->HasVotedToDraw( ) )
+                        player->SetDrawVote( true );
+                    else
+                        ChangedVote = false; //continue in case someone left and now we have enough votes
+
+                    uint32_t VotesNeeded = (float)ceil( GetNumHumanPlayers( ) * 0.75 );
+                    uint32_t Votes = 0;
+
+                    for( vector<CGamePlayer *> :: iterator i = m_Players.begin( ); i != m_Players.end( ); i++)
+                    {
+                        if( (*i)->HasVotedToDraw( ) )
+                            ++Votes;
+                    }
+
+                    if( Votes >= VotesNeeded )
+                    {
+                        SendAllChat( "The game has voted to be drawn. The game will end soon, you may wanna leave anytime." );
+                        if(m_Stats) {
+                            m_Stats->SetWinner(0);
+                        }
+                        m_GameOverTime = GetTime( );
+                    }
+                    else if( ChangedVote ) //only display message if they actually changed vote
+                    {
+                        SendAllChat( User + " has voted to draw the game, there are [" + UTIL_ToString( VotesNeeded - Votes ) + "] votes required to pass." );
+                    }
+                }
+                else if( Command == "undraw" && player->HasVotedToDraw( ) )
+                {
+                    player->SetDrawVote( false );
+                    SendAllChat( User + " has recalled his draw vote." );
+                }
+            }
+            else
+                SendChat( player, "Observers cannot vote to draw." );
         }
         
 	return HideCommand;
