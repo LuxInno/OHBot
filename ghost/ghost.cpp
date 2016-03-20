@@ -1448,6 +1448,8 @@ void CGHost :: ParseConfigValues( map<string, string> configs )
             m_VoteStartMinPlayers = UTIL_ToUInt32(iterator->second);
 	} else if(iterator->first == "autohost_symbol") {
 	    m_AutoHostSplitter = iterator->second;
+	} else if(iterator->first == "ohs_show_stats_instead_of_join") {
+            m_ShowStatsOnJoin = UTIL_ToUInt32(iterator->second) == 0 ? false : true;
         } else {
             CONSOLE_Print("Unused!! " + iterator->first + " of value " + iterator->second);
         }

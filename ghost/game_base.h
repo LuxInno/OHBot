@@ -44,7 +44,9 @@ class CCallableGetPlayerId;
 class CCallableCreatePlayerId;
 class CCallableGameUpdate;
 class CCallableGetPlayerScore;
+class CCallableGetPlayerStats;
 
+typedef pair<string,CCallableGetPlayerStats *> PairedGPS;
 typedef pair<string,CCallableGameUpdate *> PairedGameUpdate;
 
 class CBaseGame
@@ -63,6 +65,7 @@ protected:
 	vector<CCallableGetPlayerId *> m_PairedGetPlayerIds;		// vector of paired threaded database get player ids in progress
 	vector<CCallableCreatePlayerId *> m_PairedCreatePlayerIds;		// vector of paired threaded database get player ids in progress
 	vector<CCallableGetPlayerScore *> m_PairedGetPlayerScores;		// vector of paired threaded database get player scores in progress
+        vector<PairedGPS> m_PairedGPS;
 	queue<CIncomingAction *> m_Actions;				// queue of actions to be sent
 	vector<string> m_Reserved;						// vector of player names with reserved slots (from the !hold command)
 	set<string> m_IgnoredNames;						// set of player names to NOT print ban messages for when joining because they've already been printed

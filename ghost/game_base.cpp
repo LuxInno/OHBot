@@ -261,14 +261,18 @@ CBaseGame :: ~CBaseGame( )
 	for( vector<CCallableCreatePlayerId *> :: iterator i = m_PairedCreatePlayerIds.begin( ); i != m_PairedCreatePlayerIds.end( ); i++ )
 		m_GHost->m_Callables.push_back( *i );
 
-    for( vector<PairedGameUpdate> :: iterator i = m_GameUpdates.begin( ); i != m_GameUpdates.end( ); ++i )
-        m_GHost->m_Callables.push_back( i->second );
         
-	while( !m_Actions.empty( ) )
-	{
-		delete m_Actions.front( );
-		m_Actions.pop( );
-	}
+        for( vector<PairedGPS> :: iterator i = m_PairedGPS.begin( ); i != m_PairedGPS.end( ); i++ )
+                m_GHost->m_Callables.push_back( i->second );
+
+        for( vector<PairedGameUpdate> :: iterator i = m_GameUpdates.begin( ); i != m_GameUpdates.end( ); ++i )
+                m_GHost->m_Callables.push_back( i->second );
+
+        while( !m_Actions.empty( ) )
+        {
+                delete m_Actions.front( );
+                m_Actions.pop( );
+        }
 }
 
 uint32_t CBaseGame :: GetNextTimedActionTicks( )
@@ -422,6 +426,10 @@ bool CBaseGame :: Update( void *fd, void *send_fd )
                 if(id != 0){
                     SendChat(player, "Welcome back " + player->GetName() + "! Enjoy your stay and good luck for your game :-)");
                     player->SetPlayerId( id );
+                    if(m_GHost->m_ShowStatsOnJoin) {
+                        m_PairedGPS.push_back(PairedGPS( player->GetName(), m_GHost->m_DB->ThreadedGetPlayerStats( m_GHost->m_AliasId, id )));
+                    }
+                    
                     m_PairedGetPlayerScores.push_back(m_GHost->m_DB->ThreadedGetPlayerScore( m_GHost->m_AliasId, id ));
                 } else {
                     SendChat(player, "Hey you are new here! Please stand by, we shortly create an unique identifier for your.");
@@ -479,15 +487,45 @@ bool CBaseGame :: Update( void *fd, void *send_fd )
 	}
     
     
-    for( vector<PairedGameUpdate> :: iterator i = m_GameUpdates.begin( ); i != m_GameUpdates.end( );) {
-	    if(i->second->GetReady()) {
-            m_GHost->m_DB->RecoverCallable( i->second );
-            delete i->second;
-            i = m_GameUpdates.erase( i );
+        for( vector<PairedGameUpdate> :: iterator i = m_GameUpdates.begin( ); i != m_GameUpdates.end( );) {
+                if(i->second->GetReady()) {
+                m_GHost->m_DB->RecoverCallable( i->second );
+                delete i->second;
+                i = m_GameUpdates.erase( i );
+            }
+            else
+                ++i;
         }
-        else
-            ++i;
-    }
+
+        for( vector<PairedGPS> :: iterator i = m_PairedGPS.begin( ); i != m_PairedGPS.end( ); )
+        {
+                if( i->second->GetReady( ) )
+                {
+			string StatsTemplate = m_GHost->m_StatsTemplates[i->second->GetAliasId( )];
+			string AliasName     = m_GHost->m_Aliases[i->second->GetAliasId( )];
+			CGamePlayer *player  = GetPlayerFromId(i->second->GetPlayerId( ));
+
+			map<string, string> stats = i->second->GetResult( );
+
+			typedef map<string, string>::iterator value_iterator;
+    			for(value_iterator value = stats.begin(); value != stats.end(); value++)
+			{
+                            UTIL_Replace( StatsTemplate, "{" + value->first + "}", value->second );
+			}
+                        
+                        if(stats.find("VALUE_01") != stats.end()) {
+                            SendAllChat(StatsTemplate);
+                        } else {
+                            SendAllChat( player->GetName() + " has not played any " + AliasName + " yet.");
+                        }
+
+                        m_GHost->m_DB->RecoverCallable( i->second );
+                        delete i->second;
+                        i = m_PairedGPS.erase( i );
+                }
+                else
+                        i++;
+        }
     
 	// update players
 
@@ -2116,7 +2154,7 @@ void CBaseGame :: EventPlayerJoined( CPotentialPlayer *potential, CIncomingJoinP
 		m_Locked = true;
 	}
         
-        if(Player) {
+        if(Player &&! m_GHost->m_ShowStatsOnJoin) {
             if(Reserved) {
                 if(RootAdminCheck) {
                     SendAllChat("Root Admin [" + Player->GetName() + "] joined the game.");
@@ -4439,7 +4477,6 @@ void CBaseGame :: StartCountDownAuto( bool requireSpoofChecks )
 
 		if( GetNumHumanPlayers( ) < m_AutoStartPlayers )
 		{
-			SendAllChat( m_GHost->m_Language->WaitingForPlayersBeforeAutoStart( UTIL_ToString( m_AutoStartPlayers ), UTIL_ToString( m_AutoStartPlayers - GetNumHumanPlayers( ) ) ) );
 			return;
 		}
 

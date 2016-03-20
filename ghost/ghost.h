@@ -158,6 +158,7 @@ public:
         uint32_t m_BanLastTime;
         bool m_AllowVoteStart;
         uint32_t m_VoteStartMinPlayers;
+        bool m_ShowStatsOnJoin;
 
 	CGHost( CConfig *CFG );
 	~CGHost( );

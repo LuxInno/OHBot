@@ -107,9 +107,6 @@ CGame :: ~CGame( )
 		m_CallableGameAdd = NULL;
 	}
 
-        for( vector<PairedGPS> :: iterator i = m_PairedGPS.begin( ); i != m_PairedGPS.end( ); i++ )
-                m_GHost->m_Callables.push_back( i->second );
-
         for( vector<PairedBanAdd> :: iterator i = m_PairedBanAdds.begin( ); i != m_PairedBanAdds.end( ); i++ )
                 m_GHost->m_Callables.push_back( i->second );
 
@@ -137,35 +134,6 @@ CGame :: ~CGame( )
 
 bool CGame :: Update( void *fd, void *send_fd )
 {
-        for( vector<PairedGPS> :: iterator i = m_PairedGPS.begin( ); i != m_PairedGPS.end( ); )
-        {
-                if( i->second->GetReady( ) )
-                {
-			string StatsTemplate = m_GHost->m_StatsTemplates[i->second->GetAliasId( )];
-			string AliasName     = m_GHost->m_Aliases[i->second->GetAliasId( )];
-			CGamePlayer *player  = GetPlayerFromId(i->second->GetPlayerId( ));
-
-			map<string, string> stats = i->second->GetResult( );
-
-			typedef map<string, string>::iterator value_iterator;
-    			for(value_iterator value = stats.begin(); value != stats.end(); value++)
-			{
-                            UTIL_Replace( StatsTemplate, "{" + value->first + "}", value->second );
-			}
-                        
-                        if(stats.size() > 0) {
-                            SendAllChat(StatsTemplate);
-                        } else {
-                            SendAllChat( player->GetName() + " has not played any " + AliasName + " yet.");
-                        }
-
-                        m_GHost->m_DB->RecoverCallable( i->second );
-                        delete i->second;
-                        i = m_PairedGPS.erase( i );
-                }
-                else
-                        i++;
-        }
         for( vector<PairedBanAdd> :: iterator i = m_PairedBanAdds.begin( ); i != m_PairedBanAdds.end( ); )
         {
                 if( i->second->GetReady( ) )
