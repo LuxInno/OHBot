@@ -1737,7 +1737,7 @@ double MySQLGetPlayerScore( void *conn, string *error, uint32_t botid, uint32_t 
 void MySQLUpdateGameInfo( void *conn, string *error, uint32_t botid, uint32_t gameid, string gamename )
 {
     string EscGameName = MySQLEscapeString( conn, gamename );
-    string Query = "UPDATE oh_games SET gamename='" + EscGameName + "' WHERE gameid = '" + UTIL_ToString(gameid) + "';";
+    string Query = "UPDATE oh_games SET gamename='" + EscGameName + "' WHERE id = '" + UTIL_ToString(gameid) + "';";
 
     if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
         *error = mysql_error( (MYSQL *)conn );
