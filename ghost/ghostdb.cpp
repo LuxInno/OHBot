@@ -249,6 +249,11 @@ double CGHostDB :: GetPlayerScore( uint32_t aliasid, uint32_t playerid )
     return 0;
 }
 
+void CGHostDB :: UpdateGameInfo( uint32_t gameid, string gamename )
+{
+    return;
+}
+
 CCallableAdminCount *CGHostDB :: ThreadedAdminCount( string server )
 {
 	return NULL;
@@ -424,6 +429,12 @@ CCallableGetPlayerScore *CGHostDB :: ThreadedGetPlayerScore( uint32_t aliasid, u
         return NULL;
 }
 
+CCallableUpdateGameInfo *CGHostDB :: ThreadedUpdateGameInfo( uint32_t gameid, string gamename )
+{
+        return NULL;
+}
+
+
 //
 // Callables
 //
@@ -595,6 +606,11 @@ CCallableGetPlayerStats :: ~CCallableGetPlayerStats( )
 }
 
 CCallableGetPlayerScore :: ~CCallableGetPlayerScore( )
+{
+
+}
+
+CCallableUpdateGameInfo :: ~CCallableUpdateGameInfo( )
 {
 
 }

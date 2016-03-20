@@ -58,6 +58,7 @@ class CCallableGetAliases;
 class CCallableGetStatsTemplates;
 class CCallableGetPlayerStats;
 class CCallableGetPlayerScore;
+class CCallableUpdateGameInfo;
 class CDBBan;
 class CDBGame;
 class CDBGamePlayer;
@@ -125,6 +126,8 @@ public:
         virtual map<uint32_t, string> GetStatsTemplates( );
         virtual map<string, string> GetPlayerStats( uint32_t aliasid, uint32_t playerid );
         virtual double GetPlayerScore( uint32_t aliasid, uint32_t playerid );
+        virtual void UpdateGameInfo( uint32_t gameid, string gamename );
+        
 	// threaded database functions
 
 	virtual void CreateThread( CBaseCallable *callable );
@@ -163,6 +166,7 @@ public:
         virtual CCallableGetStatsTemplates *ThreadedGetStatsTemplates( );
         virtual CCallableGetPlayerStats *ThreadedGetPlayerStats( uint32_t aliasid, uint32_t playerid );
         virtual CCallableGetPlayerScore *ThreadedGetPlayerScore( uint32_t aliasid, uint32_t playerid );
+        virtual CCallableUpdateGameInfo * ThreadedUpdateGameInfo( uint32_t gameid, string gamename );
 };
 
 //
@@ -782,6 +786,17 @@ public:
 	virtual uint32_t GetPlayerId( )						{ return m_PlayerId; }
         virtual double GetResult( )                              { return m_Result; }
         virtual void SetResult( double nResult ) { m_Result = nResult; }
+};
+
+class CCallableUpdateGameInfo : virtual public CBaseCallable
+{
+protected:
+	uint32_t m_GameId;
+	string m_GameName;
+
+public:
+        CCallableUpdateGameInfo( uint32_t nGameId, string nGameName ) : CBaseCallable( ), m_GameId( nGameId ), m_GameName( nGameName ) { }
+        virtual ~CCallableUpdateGameInfo( );
 };
 
 //

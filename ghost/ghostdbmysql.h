@@ -87,7 +87,8 @@ public:
         virtual CCallableGetAliases *ThreadedGetAliases( );
         virtual CCallableGetStatsTemplates *ThreadedGetStatsTemplates( );
         virtual CCallableGetPlayerStats *ThreadedGetPlayerStats( uint32_t aliasid, uint32_t playerid ); 
-        virtual CCallableGetPlayerScore *ThreadedGetPlayerScore( uint32_t aliasid, uint32_t playerid );   
+        virtual CCallableGetPlayerScore *ThreadedGetPlayerScore( uint32_t aliasid, uint32_t playerid ); 
+        virtual CCallableUpdateGameInfo *ThreadedUpdateGameInfo( uint32_t gameid, string gamename );   
  
 	virtual void *GetIdleConnection( );
 };
@@ -131,6 +132,7 @@ map<uint32_t, string> MySQLGetAliases( void *conn, string *error, uint32_t botid
 map<uint32_t, string> MySQLGetStatsTemplates( void *conn, string *error, uint32_t botid );
 map<string, string> MySQLGetPlayerStats( void *conn, string *error, uint32_t botid, uint32_t aliasid, uint32_t playerid );
 double MySQLGetPlayerScore( void *conn, string *error, uint32_t botid, uint32_t aliasid, uint32_t playerid );
+void MySQLUpdateGameInfo( uint32_t gameid, string gamename );
 
 
 //
@@ -504,6 +506,17 @@ public:
         virtual void Init( ) { CMySQLCallable :: Init( ); }
         virtual void Close( ) { CMySQLCallable :: Close( ); }
 };
+
+class CMySQLCallableUpdateGameInfo : public CCallableUpdateGameInfo, public CMySQLCallable
+{
+public:
+        CMySQLCallableUpdateGameInfo( uint32_t nGameId, string nGameName, void *nConnection, uint32_t nSQLBotID, string nSQLServer, string nSQLDatabase, string nSQLUser, string nSQLPassword, uint16_t nSQLPort ) : CBaseCallable( ), CCallableUpdateGameInfo( nGameId, nGameName ), CMySQLCallable( nConnection, nSQLBotID, nSQLServer, nSQLDatabase, nSQLUser, nSQLPassword, nSQLPort ) { }
+
+        virtual void operator( )( );
+        virtual void Init( ) { CMySQLCallable :: Init( ); }
+        virtual void Close( ) { CMySQLCallable :: Close( ); }
+};
+
 #endif
 
 #endif
