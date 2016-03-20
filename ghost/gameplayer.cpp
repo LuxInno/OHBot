@@ -211,7 +211,7 @@ CGamePlayer :: CGamePlayer( CGameProtocol *nProtocol, CBaseGame *nGame, CTCPSock
 	m_StatsSentTime = 0;
 	m_StatsDotASentTime = 0;
 	m_LastGProxyWaitNoticeSentTime = 0;
-	m_Score = -100000.0;
+	m_Score = 1000.00;
 	m_LoggedIn = false;
 	m_Spoofed = false;
 	m_Reserved = nReserved;
@@ -267,7 +267,7 @@ CGamePlayer :: CGamePlayer( CPotentialPlayer *potential, unsigned char nPID, str
 	m_StatsSentTime = 0;
 	m_StatsDotASentTime = 0;
 	m_LastGProxyWaitNoticeSentTime = 0;
-	m_Score = -100000.0;
+	m_Score = 1000.00;
 	m_LoggedIn = false;
 	m_Spoofed = false;
 	m_Reserved = nReserved;

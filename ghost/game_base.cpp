@@ -444,6 +444,9 @@ bool CBaseGame :: Update( void *fd, void *send_fd )
                 double score = (*i)->GetResult();
 
                 if(player) {
+                    if(score == 0.00) {
+                        score = 1000.00;
+                    }
                     player->SetScore(score);
                 }
                 
@@ -2387,7 +2390,6 @@ void CBaseGame :: EventPlayerJoinedWithScore( CPotentialPlayer *potential, CInco
 		Player->SetSpoofed( true );
 
 	Player->SetWhoisShouldBeSent( m_GHost->m_SpoofChecks == 1 || ( m_GHost->m_SpoofChecks == 2 && AnyAdminCheck ) );
-	Player->SetScore( score );
 	m_Players.push_back( Player );
 	potential->SetSocket( NULL );
 	potential->SetDeleteMe( true );

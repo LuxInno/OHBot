@@ -104,7 +104,7 @@ public:
 	virtual uint32_t GamePlayerCount( string name );
 	virtual CDBGamePlayerSummary *GamePlayerSummaryCheck( string name );
 	virtual uint32_t DotAGameAdd( uint32_t gameid, uint32_t winner, uint32_t min, uint32_t sec );
-	virtual uint32_t DotAPlayerAdd( uint32_t gameid, uint32_t colour, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t gold, uint32_t neutralkills, string item1, string item2, string item3, string item4, string item5, string item6, string hero, uint32_t newcolour, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills );
+	virtual uint32_t DotAPlayerAdd( uint32_t gameid, uint32_t colour, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t gold, uint32_t neutralkills, string item1, string item2, string item3, string item4, string item5, string item6, string skill1, string skill2, string skill3, string skill4, string skill5, string skill6, string hero, uint32_t newcolour, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills, uint32_t level );
 	virtual uint32_t DotAPlayerCount( string name );
 	virtual CDBDotAPlayerSummary *DotAPlayerSummaryCheck( string name );
 	virtual string FromCheck( uint32_t ip );
@@ -146,7 +146,7 @@ public:
 	virtual CCallableGamePlayerAdd *ThreadedGamePlayerAdd( uint32_t gameid, string name, string ip, uint32_t spoofed, string spoofedrealm, uint32_t reserved, uint32_t loadingtime, uint32_t left, string leftreason, uint32_t team, uint32_t colour, uint32_t playerid );
 	virtual CCallableGamePlayerSummaryCheck *ThreadedGamePlayerSummaryCheck( string name );
 	virtual CCallableDotAGameAdd *ThreadedDotAGameAdd( uint32_t gameid, uint32_t winner, uint32_t min, uint32_t sec );
-	virtual CCallableDotAPlayerAdd *ThreadedDotAPlayerAdd( uint32_t gameid, uint32_t colour, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t gold, uint32_t neutralkills, string item1, string item2, string item3, string item4, string item5, string item6, string hero, uint32_t newcolour, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills );
+	virtual CCallableDotAPlayerAdd *ThreadedDotAPlayerAdd( uint32_t gameid, uint32_t colour, uint32_t kills, uint32_t deaths, uint32_t creepkills, uint32_t creepdenies, uint32_t assists, uint32_t gold, uint32_t neutralkills, string item1, string item2, string item3, string item4, string item5, string item6, string skill1, string skill2, string skill3, string skill4, string skill5, string skill6, string hero, uint32_t newcolour, uint32_t towerkills, uint32_t raxkills, uint32_t courierkills, uint32_t level );
 	virtual CCallableDotAPlayerSummaryCheck *ThreadedDotAPlayerSummaryCheck( string name );
 	virtual CCallableDownloadAdd *ThreadedDownloadAdd( string map, uint32_t mapsize, string name, string ip, uint32_t spoofed, string spoofedrealm, uint32_t downloadtime );
 	virtual CCallableScoreCheck *ThreadedScoreCheck( string category, string name, string server );
@@ -487,15 +487,22 @@ protected:
 	string m_Item4;
 	string m_Item5;
 	string m_Item6;
+	string m_Skill1;
+	string m_Skill2;
+	string m_Skill3;
+	string m_Skill4;
+	string m_Skill5;
+	string m_Skill6;
 	string m_Hero;
 	uint32_t m_NewColour;
 	uint32_t m_TowerKills;
 	uint32_t m_RaxKills;
 	uint32_t m_CourierKills;
+        uint32_t m_Level;
 	uint32_t m_Result;
 
 public:
-	CCallableDotAPlayerAdd( uint32_t nGameID, uint32_t nColour, uint32_t nKills, uint32_t nDeaths, uint32_t nCreepKills, uint32_t nCreepDenies, uint32_t nAssists, uint32_t nGold, uint32_t nNeutralKills, string nItem1, string nItem2, string nItem3, string nItem4, string nItem5, string nItem6, string nHero, uint32_t nNewColour, uint32_t nTowerKills, uint32_t nRaxKills, uint32_t nCourierKills ) : CBaseCallable( ), m_GameID( nGameID ), m_Colour( nColour ), m_Kills( nKills ), m_Deaths( nDeaths ), m_CreepKills( nCreepKills ), m_CreepDenies( nCreepDenies ), m_Assists( nAssists ), m_Gold( nGold ), m_NeutralKills( nNeutralKills ), m_Item1( nItem1 ), m_Item2( nItem2 ), m_Item3( nItem3 ), m_Item4( nItem4 ), m_Item5( nItem5 ), m_Item6( nItem6 ), m_Hero( nHero ), m_NewColour( nNewColour ), m_TowerKills( nTowerKills ), m_RaxKills( nRaxKills ), m_CourierKills( nCourierKills ), m_Result( 0 ) { }
+	CCallableDotAPlayerAdd( uint32_t nGameID, uint32_t nColour, uint32_t nKills, uint32_t nDeaths, uint32_t nCreepKills, uint32_t nCreepDenies, uint32_t nAssists, uint32_t nGold, uint32_t nNeutralKills, string nItem1, string nItem2, string nItem3, string nItem4, string nItem5, string nItem6, string nSkill1, string nSkill2, string nSkill3, string nSkill4, string nSkill5, string nSkill6, string nHero, uint32_t nNewColour, uint32_t nTowerKills, uint32_t nRaxKills, uint32_t nCourierKills, uint32_t nLevel ) : CBaseCallable( ), m_GameID( nGameID ), m_Colour( nColour ), m_Kills( nKills ), m_Deaths( nDeaths ), m_CreepKills( nCreepKills ), m_CreepDenies( nCreepDenies ), m_Assists( nAssists ), m_Gold( nGold ), m_NeutralKills( nNeutralKills ), m_Item1( nItem1 ), m_Item2( nItem2 ), m_Item3( nItem3 ), m_Item4( nItem4 ), m_Item5( nItem5 ), m_Item6( nItem6 ), m_Skill1( nSkill1 ), m_Skill2( nSkill2 ), m_Skill3( nSkill3 ), m_Skill4( nSkill4 ), m_Skill5( nSkill5 ), m_Skill6( nSkill6 ), m_Hero( nHero ), m_NewColour( nNewColour ), m_TowerKills( nTowerKills ), m_RaxKills( nRaxKills ), m_CourierKills( nCourierKills ), m_Level( nLevel ), m_Result( 0 ) { }
 	virtual ~CCallableDotAPlayerAdd( );
 
 	virtual uint32_t GetResult( )				{ return m_Result; }
@@ -985,15 +992,17 @@ private:
 	uint32_t m_Gold;
 	uint32_t m_NeutralKills;
 	string m_Items[6];
+        string m_Skills[6];
 	string m_Hero;
 	uint32_t m_NewColour;
 	uint32_t m_TowerKills;
 	uint32_t m_RaxKills;
 	uint32_t m_CourierKills;
+        uint32_t m_Level;
 
 public:
 	CDBDotAPlayer( );
-	CDBDotAPlayer( uint32_t nID, uint32_t nGameID, uint32_t nColour, uint32_t nKills, uint32_t nDeaths, uint32_t nCreepKills, uint32_t nCreepDenies, uint32_t nAssists, uint32_t nGold, uint32_t nNeutralKills, string nItem1, string nItem2, string nItem3, string nItem4, string nItem5, string nItem6, string nHero, uint32_t nNewColour, uint32_t nTowerKills, uint32_t nRaxKills, uint32_t nCourierKills );
+	CDBDotAPlayer( uint32_t nID, uint32_t nGameID, uint32_t nColour, uint32_t nKills, uint32_t nDeaths, uint32_t nCreepKills, uint32_t nCreepDenies, uint32_t nAssists, uint32_t nGold, uint32_t nNeutralKills, string nItem1, string nItem2, string nItem3, string nItem4, string nItem5, string nItem6, string nSkill1, string nSkill2, string nSkill3, string nSkill4, string nSkill5, string nSkill6, string nHero, uint32_t nNewColour, uint32_t nTowerKills, uint32_t nRaxKills, uint32_t nCourierKills, uint32_t nLevel );
 	~CDBDotAPlayer( );
 
 	uint32_t GetID( )			{ return m_ID; }
@@ -1007,11 +1016,13 @@ public:
 	uint32_t GetGold( )			{ return m_Gold; }
 	uint32_t GetNeutralKills( )	{ return m_NeutralKills; }
 	string GetItem( unsigned int i );
+        string GetSkill( unsigned int i);
 	string GetHero( )			{ return m_Hero; }
 	uint32_t GetNewColour( )	{ return m_NewColour; }
 	uint32_t GetTowerKills( )	{ return m_TowerKills; }
 	uint32_t GetRaxKills( )		{ return m_RaxKills; }
 	uint32_t GetCourierKills( )	{ return m_CourierKills; }
+        uint32_t GetLevel( )            { return m_Level; }
 
 	void SetColour( uint32_t nColour )				{ m_Colour = nColour; }
 	void SetKills( uint32_t nKills )				{ m_Kills = nKills; }
@@ -1022,11 +1033,13 @@ public:
 	void SetGold( uint32_t nGold )					{ m_Gold = nGold; }
 	void SetNeutralKills( uint32_t nNeutralKills )	{ m_NeutralKills = nNeutralKills; }
 	void SetItem( unsigned int i, string item );
+	void SetSkill( unsigned int i, string skill );
 	void SetHero( string nHero )					{ m_Hero = nHero; }
 	void SetNewColour( uint32_t nNewColour )		{ m_NewColour = nNewColour; }
 	void SetTowerKills( uint32_t nTowerKills )		{ m_TowerKills = nTowerKills; }
 	void SetRaxKills( uint32_t nRaxKills )			{ m_RaxKills = nRaxKills; }
 	void SetCourierKills( uint32_t nCourierKills )	{ m_CourierKills = nCourierKills; }
+	void SetLevel( uint32_t nLevel )                        { m_Level = nLevel; }
 };
 
 //

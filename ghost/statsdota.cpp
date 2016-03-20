@@ -262,6 +262,19 @@ bool CStatsDOTA :: ProcessAction( CIncomingAction *Action )
 							{
 								// a player disconnected
 							}
+                                                        else if( KeyString.size( ) >= 6 && KeyString.substr( 0, 5 ) == "Level" )
+                                                        {
+                                                            string LevelString = KeyString.substr( 5 );
+                                                            uint32_t Level = UTIL_ToUInt32( LevelString );
+                                                            CGamePlayer *Player = m_Game->GetPlayerFromColour( ValueInt );
+                                                            if (Player)
+                                                            {
+                                                                if (!m_Players[ValueInt])
+                                                                    m_Players[ValueInt] = new CDBDotAPlayer( );
+
+                                                                m_Players[ValueInt]->SetLevel(Level);
+                                                            }
+                                                        }
 						}
 						else if( DataString == "Global" )
 						{
@@ -423,7 +436,7 @@ void CStatsDOTA :: Save( CGHost *GHost, CGHostDB *DB, uint32_t GameID )
 		{
 			if( m_Players[i] )
 			{
-				GHost->m_Callables.push_back( DB->ThreadedDotAPlayerAdd( GameID, m_Players[i]->GetColour( ), m_Players[i]->GetKills( ), m_Players[i]->GetDeaths( ), m_Players[i]->GetCreepKills( ), m_Players[i]->GetCreepDenies( ), m_Players[i]->GetAssists( ), m_Players[i]->GetGold( ), m_Players[i]->GetNeutralKills( ), m_Players[i]->GetItem( 0 ), m_Players[i]->GetItem( 1 ), m_Players[i]->GetItem( 2 ), m_Players[i]->GetItem( 3 ), m_Players[i]->GetItem( 4 ), m_Players[i]->GetItem( 5 ), m_Players[i]->GetHero( ), m_Players[i]->GetNewColour( ), m_Players[i]->GetTowerKills( ), m_Players[i]->GetRaxKills( ), m_Players[i]->GetCourierKills( ) ) );
+				GHost->m_Callables.push_back( DB->ThreadedDotAPlayerAdd( GameID, m_Players[i]->GetColour( ), m_Players[i]->GetKills( ), m_Players[i]->GetDeaths( ), m_Players[i]->GetCreepKills( ), m_Players[i]->GetCreepDenies( ), m_Players[i]->GetAssists( ), m_Players[i]->GetGold( ), m_Players[i]->GetNeutralKills( ), m_Players[i]->GetItem( 0 ), m_Players[i]->GetItem( 1 ), m_Players[i]->GetItem( 2 ), m_Players[i]->GetItem( 3 ), m_Players[i]->GetItem( 4 ), m_Players[i]->GetItem( 5 ), m_Players[i]->GetSkill( 0 ), m_Players[i]->GetSkill( 1 ), m_Players[i]->GetSkill( 2 ), m_Players[i]->GetSkill( 3 ), m_Players[i]->GetSkill( 4 ), m_Players[i]->GetSkill( 5 ), m_Players[i]->GetHero( ), m_Players[i]->GetNewColour( ), m_Players[i]->GetTowerKills( ), m_Players[i]->GetRaxKills( ), m_Players[i]->GetCourierKills( ),  m_Players[i]->GetLevel( ) ) );
 				Players++;
 			}
 		}
