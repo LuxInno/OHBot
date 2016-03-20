@@ -1018,34 +1018,19 @@ bool CGHost :: Update( long usecBlock )
 }
 
 void CGHost :: EventBNETConnecting( CBNET *bnet )
-{
-	if( m_CurrentGame )
-		m_CurrentGame->SendAllChat( m_Language->ConnectingToBNET( bnet->GetServer( ) ) );
-}
+{}
 
 void CGHost :: EventBNETConnected( CBNET *bnet )
-{
-	if( m_CurrentGame )
-		m_CurrentGame->SendAllChat( m_Language->ConnectedToBNET( bnet->GetServer( ) ) );
-}
+{}
 
 void CGHost :: EventBNETDisconnected( CBNET *bnet )
-{
-	if( m_CurrentGame )
-		m_CurrentGame->SendAllChat( m_Language->DisconnectedFromBNET( bnet->GetServer( ) ) );
-}
+{}
 
 void CGHost :: EventBNETLoggedIn( CBNET *bnet )
-{
-	if( m_CurrentGame )
-		m_CurrentGame->SendAllChat( m_Language->LoggedInToBNET( bnet->GetServer( ) ) );
-}
+{}
 
 void CGHost :: EventBNETGameRefreshed( CBNET *bnet )
-{
-	if( m_CurrentGame )
-		m_CurrentGame->EventGameRefreshed( bnet->GetServer( ) );
-}
+{}
 
 void CGHost :: EventBNETGameRefreshFailed( CBNET *bnet )
 {
@@ -1073,10 +1058,7 @@ void CGHost :: EventBNETGameRefreshFailed( CBNET *bnet )
 }
 
 void CGHost :: EventBNETConnectTimedOut( CBNET *bnet )
-{
-	if( m_CurrentGame )
-		m_CurrentGame->SendAllChat( m_Language->ConnectingToBNETTimedOut( bnet->GetServer( ) ) );
-}
+{}
 
 void CGHost :: EventBNETWhisper( CBNET *bnet, string user, string message ){}
 

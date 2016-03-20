@@ -1847,7 +1847,7 @@ void CBaseGame :: EventPlayerJoined( CPotentialPlayer *potential, CIncomingJoinP
 	bool RootAdminCheck = IsRootAdmin(joinPlayer->GetName( ));
 	bool PremiumCheck = IsPremium(joinPlayer->GetName( ));
 
-	bool Reserved = AdminCheck || RootAdminCheck || PremiumCheck;
+	bool Reserved = false; // AdminCheck || RootAdminCheck || PremiumCheck;
 
 	// try to find a slot
 
