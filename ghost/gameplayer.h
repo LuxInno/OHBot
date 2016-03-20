@@ -212,7 +212,7 @@ public:
         void SetPlayerId( uint32_t nPLayerId )                                          { m_PlayerId = nPLayerId; }
         void SetLeftTime( uint32_t nLeftTime )                                          { m_LeftTime = nLeftTime; }
         void SetVotedToStart( )                                                         { m_HasVotedToStart = true; }
-        void SetDrawVote( bool nDrawVote )                                                         { m_HasVotedToStart = nDrawVote; }
+        void SetDrawVote( bool nDrawVote )                                                         { m_HasVotedToDraw = nDrawVote; }
         
 	string GetNameTerminated( );
 	uint32_t GetPing( bool LCPing );
