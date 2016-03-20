@@ -44,6 +44,7 @@ public:
 	CStats( CBaseGame *nGame );
 	virtual ~CStats( );
 
+        virtual void SetWinner( uint32_t nWinner ) {}
 	virtual bool ProcessAction( CIncomingAction *Action );
 	virtual void Save( CGHost *GHost, CGHostDB *DB, uint32_t GameID );
 };
