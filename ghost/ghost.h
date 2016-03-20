@@ -155,6 +155,7 @@ public:
         vector<CDBBan *> m_BanList;
         uint32_t m_LastListRefresh;
 	string m_AutoHostSplitter;
+        uint32_t m_BanLastTime;
 
 	CGHost( CConfig *CFG );
 	~CGHost( );

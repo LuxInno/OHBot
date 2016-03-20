@@ -110,6 +110,9 @@ CGame :: ~CGame( )
         for( vector<PairedGPS> :: iterator i = m_PairedGPS.begin( ); i != m_PairedGPS.end( ); i++ )
                 m_GHost->m_Callables.push_back( i->second );
 
+        for( vector<PairedBanAdd> :: iterator i = m_PairedBanAdds.begin( ); i != m_PairedBanAdds.end( ); i++ )
+                m_GHost->m_Callables.push_back( i->second );
+
 	for( vector<CDBBan *> :: iterator i = m_DBBans.begin( ); i != m_DBBans.end( ); i++ )
 		delete *i;
 
@@ -163,7 +166,21 @@ bool CGame :: Update( void *fd, void *send_fd )
                 else
                         i++;
         }
-
+        for( vector<PairedBanAdd> :: iterator i = m_PairedBanAdds.begin( ); i != m_PairedBanAdds.end( ); )
+        {
+                if( i->second->GetReady( ) )
+                {
+                    if( i->second->GetResult( )) {
+                        SendAllChat( m_GHost->m_Language->PlayerWasBannedByPlayer( i->second->GetServer( ), i->second->GetUser( ), i->first ) );
+                    }
+                    
+                    m_GHost->m_DB->RecoverCallable( i->second );
+                    delete i->second;
+                    i = m_PairedBanAdds.erase( i );
+                }
+                else
+                        i++;
+        }
 
 	return CBaseGame :: Update( fd, send_fd );
 }
@@ -339,6 +356,14 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
 				}
 			}
 
+                        			//
+			// !BANLAST
+			//
+
+			if( Command == "banlast" && m_GameLoaded && !m_GHost->m_BNETs.empty( ) && m_DBBanLast )
+                            m_PairedBanAdds.push_back( PairedBanAdd( User, m_GHost->m_DB->ThreadedBanAdd( m_DBBanLast->GetServer( ), m_DBBanLast->GetName( ), m_DBBanLast->GetIP( ), m_GameName, User, Payload, m_GHost->m_BanLastTime ) ) );
+
+                        
 			//
 			// !CHECK
 			//

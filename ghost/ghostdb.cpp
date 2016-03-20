@@ -89,7 +89,7 @@ CDBBan *CGHostDB :: BanCheck( string server, string user, string ip )
 	return NULL;
 }
 
-bool CGHostDB :: BanAdd( string server, string user, string ip, string gamename, string admin, string reason )
+bool CGHostDB :: BanAdd( string server, string user, string ip, string gamename, string admin, string reason, uint32_t banlength )
 {
 	return false;
 }
@@ -284,7 +284,7 @@ CCallableBanCheck *CGHostDB :: ThreadedBanCheck( string server, string user, str
 	return NULL;
 }
 
-CCallableBanAdd *CGHostDB :: ThreadedBanAdd( string server, string user, string ip, string gamename, string admin, string reason )
+CCallableBanAdd *CGHostDB :: ThreadedBanAdd( string server, string user, string ip, string gamename, string admin, string reason, uint32_t banlength )
 {
 	return NULL;
 }
