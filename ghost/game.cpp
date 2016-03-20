@@ -758,35 +758,6 @@ bool CGame :: EventPlayerBotCommand( CGamePlayer *player, string command, string
 			}
 
 			//
-			// !HOLD (hold a slot for someone)
-			//
-
-			if( Command == "hold" && !Payload.empty( ) && !m_GameLoading && !m_GameLoaded )
-			{
-				// hold as many players as specified, e.g. "Varlock Kilranin" holds players "Varlock" and "Kilranin"
-
-				stringstream SS;
-				SS << Payload;
-
-				while( !SS.eof( ) )
-				{
-					string HoldName;
-					SS >> HoldName;
-
-					if( SS.fail( ) )
-					{
-						CONSOLE_Print( "[GAME: " + m_GameName + "] bad input to hold command" );
-						break;
-					}
-					else
-					{
-						SendAllChat( m_GHost->m_Language->AddedPlayerToTheHoldList( HoldName ) );
-						AddToReserved( HoldName );
-					}
-				}
-			}
-
-			//
 			// !KICK (kick a player)
 			//
 
