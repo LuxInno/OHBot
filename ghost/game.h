@@ -31,9 +31,7 @@ class CDBGamePlayer;
 class CStats;
 class CCallableBanAdd;
 class CCallableGameAdd;
-class CCallableGetPlayerStats;
 
-typedef pair<string,CCallableGetPlayerStats *> PairedGPS;
 typedef pair<string,CCallableBanAdd *> PairedBanAdd;
 
 class CGame : public CBaseGame
@@ -45,7 +43,6 @@ protected:
 	vector<CDBGamePlayer *> m_DBGamePlayers;	// vector of potential gameplayer data for the database
 	CStats *m_Stats;							// class to keep track of game stats such as kills/deaths/assists in dota
 	CCallableGameAdd *m_CallableGameAdd;		// threaded database game addition in progress
-	vector<PairedGPS> m_PairedGPS;
         vector<PairedBanAdd> m_PairedBanAdds;
 
 public:
