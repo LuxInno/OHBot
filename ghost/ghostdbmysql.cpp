@@ -603,6 +603,19 @@ CCallableGetPlayerScore *CGHostDBMySQL :: ThreadedGetPlayerScore( uint32_t alias
         return Callable;
 }
 
+CCallableUpdateGameInfo *CGHostDBMySQL :: ThreadedUpdateGameInfo( uint32_t gameid, string gamename )
+{
+        void *Connection = GetIdleConnection( );
+
+        if( !Connection )
+                m_NumConnections++;
+
+        CCallableUpdateGameInfo *Callable = new CMySQLCallableUpdateGameInfo( gameid, gamename, Connection, m_BotID, m_Server, m_Database, m_User, m_Password, m_Port );
+        CreateThread( Callable );
+        m_OutstandingCallables++;
+        return Callable;
+}
+
 void *CGHostDBMySQL :: GetIdleConnection( )
 {
 	void *Connection = NULL;
@@ -1368,12 +1381,38 @@ uint32_t MySQLCreatePlayerId( void *conn, string *error, uint32_t botid, string 
 uint32_t MySQLGetGameId( void *conn, string *error, uint32_t botid )
 {
 	uint32_t RowID = 0;
-	string Query = "INSERT INTO oh_games (botid, gamename, gamestatus, datetime) VALUES (" + UTIL_ToString(botid) + ", 'RESERVED', 0, CURRENT_TIMESTAMP());";
+        
+        string SelectQuery = "SELECT id FROM oh_games WHERE gamename = 'RESEfRVED' AND gamestatus = 0 AND botid=" + UTIL_ToString(botid)+";";
+        
+        if( mysql_real_query( (MYSQL *)conn, SelectQuery.c_str( ), SelectQuery.size( ) ) != 0 )
+                *error = mysql_error( (MYSQL *)conn );
+        else {
+            MYSQL_RES *Result = mysql_store_result( (MYSQL *)conn );
 
-	if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
-		*error = mysql_error( (MYSQL *)conn );
-	else
-		RowID = mysql_insert_id( (MYSQL *)conn );
+            if( Result )
+            {
+                vector<string> Row = MySQLFetchRow( Result );
+
+
+                if( Row.size( ) == 1 )
+                {
+                        RowID = UTIL_ToUInt32(Row[0]);
+                        Row = MySQLFetchRow( Result );
+                }
+
+                mysql_free_result( Result );
+            }
+            else
+                *error = mysql_error( (MYSQL *)conn );
+        }
+
+        if(RowID == 0) {
+            string Query = "INSERT INTO oh_games (botid, gamename, gamestatus, datetime) VALUES (" + UTIL_ToString(botid) + ", 'RESERVED', 0, CURRENT_TIMESTAMP());";
+            if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
+                    *error = mysql_error( (MYSQL *)conn );
+            else
+                    RowID = mysql_insert_id( (MYSQL *)conn );
+        }
 
 	return RowID;
 }
@@ -1544,10 +1583,10 @@ string MySQLGameUpdate( void *conn, string *error, uint32_t botid, uint32_t host
 map<uint32_t, string> MySQLGetAliases( void *conn, string *error, uint32_t botid )
 {
     map<uint32_t, string> m_Aliases;
-	string Query = "SELECT alias_id, alias_name FROM oh_aliases;";
-    
-	if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
-		*error = mysql_error( (MYSQL *)conn );
+    string Query = "SELECT alias_id, alias_name FROM oh_aliases;";
+
+    if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
+            *error = mysql_error( (MYSQL *)conn );
     else
     {
         MYSQL_RES *Result = mysql_store_result( (MYSQL *)conn );
@@ -1662,7 +1701,7 @@ map<string, string> MySQLGetPlayerStats( void *conn, string *error, uint32_t bot
 
 double MySQLGetPlayerScore( void *conn, string *error, uint32_t botid, uint32_t aliasid, uint32_t playerid )
 {
-    double m_Score = 0.0;
+    double m_Score = 1000.00;
     string Query = "SELECT score FROM oh_stats_global WHERE `alias_id` = " + UTIL_ToString(aliasid) + " AND `pid` = " + UTIL_ToString(playerid) + ";";
 
     if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
@@ -1687,6 +1726,17 @@ double MySQLGetPlayerScore( void *conn, string *error, uint32_t botid, uint32_t 
     }
 
     return m_Score;
+}
+
+void MySQLUpdateGameInfo( void *conn, string *error, uint32_t botid, uint32_t gameid, string gamename )
+{
+    string EscGameName = MySQLEscapeString( conn, gamename );
+    string Query = "UPDATE oh_games SET gamename='" + EscGameName + "' WHERE gameid = '" + UTIL_ToString(gameid) + "';";
+
+    if( mysql_real_query( (MYSQL *)conn, Query.c_str( ), Query.size( ) ) != 0 )
+        *error = mysql_error( (MYSQL *)conn );
+
+    return;
 }
 
 //
@@ -2056,6 +2106,16 @@ void CMySQLCallableGetPlayerScore :: operator( )( )
 
         if( m_Error.empty( ) )
                 m_Result = MySQLGetPlayerScore( m_Connection, &m_Error, m_SQLBotID, m_AliasId, m_PlayerId );
+
+        Close( );
+}
+
+void CMySQLCallableUpdateGameInfo :: operator( )( )
+{
+        Init( );
+
+        if( m_Error.empty( ) )
+                MySQLUpdateGameInfo( m_Connection, &m_Error, m_SQLBotID, m_GameId, m_GameName );
 
         Close( );
 }

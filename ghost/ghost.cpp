@@ -1319,8 +1319,9 @@ void CGHost :: CreateGame( CMap *map, unsigned char gameState, bool saveGame, st
 		if( (*i)->GetHoldClan( ) )
 			(*i)->HoldClan( m_CurrentGame );
 	}
-    
-    m_NewGameId = 0;
+        
+        m_Callables.push_back(m_DB->ThreadedUpdateGameInfo(m_NewGameId, gameName));
+        m_NewGameId = 0;
 }
 
 void CGHost :: ParseConfigValues( map<string, string> configs )
