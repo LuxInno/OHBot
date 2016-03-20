@@ -29,10 +29,12 @@ class CDBBan;
 class CDBGame;
 class CDBGamePlayer;
 class CStats;
+class CCallableBanAdd;
 class CCallableGameAdd;
 class CCallableGetPlayerStats;
 
 typedef pair<string,CCallableGetPlayerStats *> PairedGPS;
+typedef pair<string,CCallableBanAdd *> PairedBanAdd;
 
 class CGame : public CBaseGame
 {
@@ -44,6 +46,7 @@ protected:
 	CStats *m_Stats;							// class to keep track of game stats such as kills/deaths/assists in dota
 	CCallableGameAdd *m_CallableGameAdd;		// threaded database game addition in progress
 	vector<PairedGPS> m_PairedGPS;
+        vector<PairedBanAdd> m_PairedBanAdds;
 
 public:
 	CGame( CGHost *nGHost, CMap *nMap, CSaveGame *nSaveGame, uint16_t nHostPort, unsigned char nGameState, string nGameName, string nOwnerName, string nCreatorName, string nCreatorServer, uint32_t nGameId );
