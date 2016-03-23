@@ -296,6 +296,8 @@ public:
         virtual void ShowTeamScores( CGamePlayer *player );
         CDBBan *IsBannedName( string name );
         CDBBan *IsBannedIP( string ip );
+        string GetLobbyTime();
+        string GetGameTime();
 };
 
 #endif

@@ -51,7 +51,7 @@ CBaseGame :: CBaseGame( CGHost *nGHost, CMap *nMap, CSaveGame *nSaveGame, uint16
 	m_Protocol = new CGameProtocol( m_GHost );
 	m_Map = new CMap( *nMap );
 	m_SaveGame = nSaveGame;
-    m_GameId = nGameId;
+        m_GameId = nGameId;
 
 	if( m_GHost->m_SaveReplays && !m_SaveGame )
 		m_Replay = new CReplay( );
@@ -133,7 +133,7 @@ CBaseGame :: CBaseGame( CGHost *nGHost, CMap *nMap, CSaveGame *nSaveGame, uint16
 	m_Lagging = false;
 	m_AutoSave = m_GHost->m_AutoSave;
 	m_MatchMaking = false;
-    m_LastGameUpdateTime = GetTime();
+        m_LastGameUpdateTime = GetTime();
 
 	if( m_SaveGame )
 	{
@@ -1296,7 +1296,7 @@ void CBaseGame :: SendAllChat( unsigned char fromPID, string message )
                         message = message.substr( 0, 254 );
 
                     SendAll( m_Protocol->SEND_W3GS_CHAT_FROM_HOST( fromPID, GetPIDs( ), 16, BYTEARRAY( ), message ) );
-                    m_LobbyLog.push_back(message);
+                    m_LobbyLog.push_back("<time>" + GetLobbyTime( ) + "</time>" + message);
 		}
 		else
 		{
@@ -1304,7 +1304,7 @@ void CBaseGame :: SendAllChat( unsigned char fromPID, string message )
                             message = message.substr( 0, 127 );
 
                     SendAll( m_Protocol->SEND_W3GS_CHAT_FROM_HOST( fromPID, GetPIDs( ), 32, UTIL_CreateByteArray( (uint32_t)0, false ), message ) );
-                    m_GameLog.push_back(message);
+                    m_GameLog.push_back("<time>" + GetGameTime( ) + "</time>" + message);
 
                     if( m_Replay )
                             m_Replay->AddChatMessage( fromPID, 32, 0, message );
@@ -2845,6 +2845,8 @@ void CBaseGame :: EventPlayerChatToHost( CGamePlayer *player, CIncomingChatPlaye
 
 					// don't relay ingame messages targeted for all players if we're currently muting all
 					// note that commands will still be processed even when muting all because we only stop relaying the messages, the rest of the function is unaffected
+                                        
+                                        m_GameLog.push_back("<time>" + GetGameTime( ) + "</time><team>All</team><player>" + player->GetName( ) + "</player> " + chatPlayer->GetMessage( ));
 
 					if( m_MuteAll )
 						Relay = false;
@@ -2855,6 +2857,10 @@ void CBaseGame :: EventPlayerChatToHost( CGamePlayer *player, CIncomingChatPlaye
 
 					CONSOLE_Print( "[GAME: " + m_GameName + "] (" + MinString + ":" + SecString + ") [Obs/Ref] [" + player->GetName( ) + "]: " + chatPlayer->GetMessage( ) );
 				}
+                                else if( ExtraFlags[0] != 0 && ExtraFlags[0] != 2 ) {
+                                    unsigned char team = m_Slots[GetSIDFromPID( chatPlayer->GetFromPID() )].GetTeam();
+                                    m_GameLog.push_back("<time>" + GetGameTime( ) + "</time><team>Team "+UTIL_ToString(team)+"</team><player>" + player->GetName( ) + "</player> " + chatPlayer->GetMessage( ));
+                                }
 
 				if( Relay )
 				{
@@ -2870,6 +2876,7 @@ void CBaseGame :: EventPlayerChatToHost( CGamePlayer *player, CIncomingChatPlaye
 				// this is a lobby message, print it to the console
 
 				CONSOLE_Print( "[GAME: " + m_GameName + "] [Lobby] [" + player->GetName( ) + "]: " + chatPlayer->GetMessage( ) );
+                                m_LobbyLog.push_back("<time>" + GetGameTime( ) + "</time><player>" + player->GetName( ) + "</player> " + chatPlayer->GetMessage( ));
 
 				if( m_MuteLobby )
 					Relay = false;
@@ -3444,8 +3451,8 @@ void CBaseGame :: EventGameLoaded( )
 
 	// read from gameloaded if available
 
-    for( vector<string> :: iterator i = m_GHost->m_GameLoaded.begin( ); i != m_GHost->m_GameLoaded.end( ); i++ )
-        SendAllChat( *i );
+        for( vector<string> :: iterator i = m_GHost->m_GameLoaded.begin( ); i != m_GHost->m_GameLoaded.end( ); i++ )
+            SendAllChat( *i );
 }
 
 unsigned char CBaseGame :: GetSIDFromPID( unsigned char PID )
@@ -4855,7 +4862,6 @@ void CBaseGame :: ShowTeamScores( CGamePlayer *player )
 			SendAllChat( Team1String );
 			SendAllChat( Team2String );
 			SendAllChat( eloChangeString );
-                        m_EloChange = eloChangeString;
 		}
 	}
 	else
@@ -4909,4 +4915,32 @@ CDBBan *CBaseGame :: IsBannedIP( string ip )
     }
 
     return NULL;
+}
+
+string CBaseGame :: GetLobbyTime( )
+{
+    string MinString = UTIL_ToString( ( (GetTime() - m_CreationTime) / 1000 ) / 60 );
+    string SecString = UTIL_ToString( ( (GetTime() - m_CreationTime) / 1000 ) % 60 );
+    
+    if( MinString.size( ) == 1 )
+            MinString.insert( 0, "0" );
+
+    if( SecString.size( ) == 1 )
+            SecString.insert( 0, "0" );
+    
+    return MinString + ':' + SecString;
+}
+
+string CBaseGame :: GetGameTime( )
+{
+    string MinString = UTIL_ToString( ( m_GameTicks / 1000 ) / 60 );
+    string SecString = UTIL_ToString( ( m_GameTicks / 1000 ) % 60 );
+
+    if( MinString.size( ) == 1 )
+            MinString.insert( 0, "0" );
+
+    if( SecString.size( ) == 1 )
+            SecString.insert( 0, "0" );
+    
+    return MinString + ':' + SecString;
 }
