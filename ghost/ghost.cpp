@@ -1322,6 +1322,7 @@ void CGHost :: CreateGame( CMap *map, unsigned char gameState, bool saveGame, st
         
         m_Callables.push_back(m_DB->ThreadedUpdateGameInfo(m_NewGameId, gameName));
         m_NewGameId = 0;
+	m_LastGameIdUpdate = GetTime();
 }
 
 void CGHost :: ParseConfigValues( map<string, string> configs )
