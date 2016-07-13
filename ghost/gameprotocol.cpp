@@ -166,7 +166,7 @@ CIncomingChatPlayer *CGameProtocol :: RECEIVE_W3GS_CHAT_TO_HOST( BYTEARRAY data 
 	//		4 bytes				-> ExtraFlags
 	//		null term string	-> Message
 
-	if( ValidateLength( data ) )
+	if( ValidateLength( data ) && data.size() >= 5)
 	{
 		unsigned int i = 5;
 		unsigned char Total = data[4];
